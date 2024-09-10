@@ -1,0 +1,31 @@
+name: mpc
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - _libgcc_mutex=0.1=conda_forge
+  - _openmp_mutex=4.5=2_gnu
+  - bzip2=1.0.8=h5eee18b_6
+  - ca-certificates=2024.8.30=hbcca054_0
+  - ld_impl_linux-64=2.38=h1181459_1
+  - libffi=3.4.4=h6a678d5_1
+  - libgcc=14.1.0=h77fa898_1
+  - libgcc-ng=14.1.0=h69a702a_1
+  - libgomp=14.1.0=h77fa898_1
+  - libstdcxx=14.1.0=hc0a3c3a_1
+  - libstdcxx-ng=14.1.0=h4852527_1
+  - libuuid=1.41.5=h5eee18b_0
+  - ncurses=6.4=h6a678d5_0
+  - openssl=3.3.1=hb9d3cd8_3
+  - pip=24.2=py311h06a4308_0
+  - python=3.11.9=h955ad1f_0
+  - readline=8.2=h5eee18b_0
+  - setuptools=72.1.0=py311h06a4308_0
+  - sqlite=3.45.3=h5eee18b_0
+  - tk=8.6.14=h39e8969_0
+  - wheel=0.43.0=py311h06a4308_0
+  - xz=5.4.6=h5eee18b_1
+  - zlib=1.2.13=h5eee18b_1
+  - pip:
+      - -r requirements.txt
+prefix: /home/piotrkicki/anaconda3/envs/mpc
