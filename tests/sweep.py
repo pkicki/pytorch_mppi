@@ -45,6 +45,8 @@ def run_exp(name, sweep_names, horizon, n_samples, values):
     fh.write("\n".join(str(x) for x in rewards) + "\n")
 
 def sweep(alg, n_samples, horizon):
+    #init_stds = np.linspace(5., 15., 11).tolist()
+    init_stds = np.linspace(6., 14., 5).tolist()
     if alg == "icem":
         name = f"icem_s{n_samples}_h{horizon}"
         noise_betas = np.linspace(0.5, 5.0, 10).tolist()
@@ -57,8 +59,6 @@ def sweep(alg, n_samples, horizon):
         sweep_names = ['noise_cutoff_freq', 'noise_sigma']
     else:
         raise ValueError("Unknown algorithm")
-    #init_stds = np.linspace(5., 15., 11).tolist()
-    init_stds = np.linspace(6., 14., 5).tolist()
 
 
     #loop = asyncio.get_event_loop()
