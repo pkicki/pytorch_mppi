@@ -3,6 +3,7 @@ import numpy as np
 import torch
 from dynamics_models.half_cheetah import HalfCheetah
 from dynamics_models.pendulum import Pendulum
+from dynamics_models.walker_2d import Walker2D
 from pytorch_mppi import mppi
 from gymnasium import logger as gym_log
 
@@ -13,13 +14,14 @@ torch.set_num_threads(1)
     
 @single_experiment
 #def experiment(env: str = "pendulum",
-def experiment(env: str = "half_cheetah",
+#def experiment(env: str = "half_cheetah",
+def experiment(env: str = "walker",
                n_episodes: int = 100,    
-               horizon: int = 15,
-               #horizon: int = 50,
-               #n_samples: int = 100,
-               n_samples: int = 5,
-               noise_sigma: float = 10.,
+               #horizon: int = 15,
+               horizon: int = 30,
+               n_samples: int = 100,
+               #n_samples: int = 5,
+               noise_sigma: float = 5.,
                lambda_: float = 1.0,
                downward_start: bool = True,
                device: str = "cpu",
@@ -48,11 +50,16 @@ def experiment(env: str = "half_cheetah",
         gym_env_name = "HalfCheetah-v4"
         model = HalfCheetah()
         noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
+    elif env == "walker":
+        gym_env_name = "Walker2d-v4"
+        model = Walker2D()
+        noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
     else:
         raise ValueError("Unknown environment")
 
 
-    env = gym.make(gym_env_name, render_mode="human" if render else None, exclude_current_positions_from_observation=False)
+    env = gym.make(gym_env_name, render_mode="human" if render else None, exclude_current_positions_from_observation=False,
+                   terminate_when_unhealthy=False)
     trajectories = []
     for i in range(n_episodes):
         env.reset()
@@ -67,9 +74,9 @@ def experiment(env: str = "half_cheetah",
                             noise_beta=noise_beta, noise_cutoff_freq=noise_cutoff_freq, sampling_freq=1./dt)
         total_reward, history = mppi.run_mppi(mppi_gym, env, model.train, iter=100, retrain_after_iter=100, render=render)
         print(f"Episode {i} Total reward", total_reward)
-        trajectories.append(history)
-    trajectories = np.array(trajectories)
-    np.save(f"mppi_trajectories_lp05.npy", trajectories)
+        #trajectories.append(history)
+    #trajectories = np.array(trajectories)
+    #np.save(f"half_cheetah_mppi_trajectories_lp5.npy", trajectories)
 
 if __name__ == "__main__":
     run_experiment(experiment)

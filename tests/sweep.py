@@ -24,7 +24,8 @@ N = 1
 #skip_existing = False
 skip_existing = True
 #env_name = "pendulum"
-env_name = "half_cheetah"
+#env_name = "half_cheetah"
+env_name = "walker"
 
 def run_exp(name, sweep_names, horizon, n_samples, values):
     filename = f"exp_results/{env_name}/{name}/{'_'.join(str(v) for v in values)}.res"
@@ -46,7 +47,8 @@ def run_exp(name, sweep_names, horizon, n_samples, values):
 
 def sweep(alg, n_samples, horizon):
     #init_stds = np.linspace(5., 15., 11).tolist()
-    init_stds = np.linspace(6., 14., 5).tolist()
+    #init_stds = np.linspace(6., 14., 5).tolist()
+    init_stds = np.linspace(1., 7., 4).tolist()
     if alg == "icem":
         name = f"icem_s{n_samples}_h{horizon}"
         noise_betas = np.linspace(0.5, 5.0, 10).tolist()
