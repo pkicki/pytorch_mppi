@@ -7,6 +7,9 @@ from torch.distributions.multivariate_normal import MultivariateNormal
 from arm_pytorch_utilities import handle_batch_input
 from functorch import vmap
 
+from pytorch_mppi.noises.colored import ColoredMultivariateNormal
+from pytorch_mppi.noises.filtered import FilteredMultivariateNormal
+
 logger = logging.getLogger(__name__)
 
 
@@ -59,7 +62,10 @@ class MPPI():
                  rollout_var_discount=0.95,
                  sample_null_action=False,
                  specific_action_sampler: typing.Optional[SpecificActionSampler] = None,
-                 noise_abs_cost=False):
+                 noise_abs_cost=False,
+                 noise_beta=None,
+                 noise_cutoff_freq=None,
+                 sampling_freq=None):
         """
         :param dynamics: function(state, action) -> next_state (K x nx) taking in batch state (K x nx) and action (K x nu)
         :param running_cost: function(state, action) -> cost (K) taking in batch state and action (same as dynamics)
@@ -128,6 +134,13 @@ class MPPI():
         self.noise_sigma = noise_sigma.to(self.d)
         self.noise_sigma_inv = torch.inverse(self.noise_sigma)
         self.noise_dist = MultivariateNormal(self.noise_mu, covariance_matrix=self.noise_sigma)
+        self.sampling_freq = sampling_freq
+        if noise_beta is not None:
+            self.noise_dist = ColoredMultivariateNormal(self.noise_mu, noise_beta, covariance_matrix=self.noise_sigma)
+        elif noise_cutoff_freq is not None:
+            assert sampling_freq is not None
+            self.noise_dist = FilteredMultivariateNormal(self.noise_mu, sampling_freq, noise_cutoff_freq, covariance_matrix=self.noise_sigma)
+
         # T x nu control sequence
         self.U = U_init
         self.u_init = u_init.to(self.d)
@@ -212,6 +225,14 @@ class MPPI():
 
         self.U = self.U + perturbations
         action = self.get_action_sequence()[:self.u_per_command]
+
+        #import matplotlib.pyplot as plt
+        #from scipy.signal import welch
+        #nperseg = 1024
+        #f, psd = welch(self.U[:, 0], fs=self.sampling_freq, nperseg=nperseg)
+        #plt.plot(f, psd)
+        #plt.show()
+
         # reduce dimensionality if we only need the first command
         if self.u_per_command == 1:
             action = action[0]
@@ -319,6 +340,7 @@ class MPPI():
             # the actions with low noise if all states have the same cost. With abs(noise) we prefer actions close to the
             # nomial trajectory.
         else:
+            #action_cost = self.lambda_ * self.noise @ self.noise_sigma_inv  # Like original paper
             action_cost = self.lambda_ * self.noise @ self.noise_sigma_inv  # Like original paper
 
         rollout_cost, self.states, actions = self._compute_rollout_costs(self.perturbed_action)
@@ -603,8 +625,10 @@ class KMPPI(MPPI):
 def run_mppi(mppi, env, retrain_dynamics, retrain_after_iter=50, iter=1000, render=True):
     dataset = torch.zeros((retrain_after_iter, mppi.nx + mppi.nu), dtype=mppi.U.dtype, device=mppi.d)
     total_reward = 0
+    actions = []
     for i in range(iter):
-        state = env.unwrapped.state.copy()
+        #state = env.unwrapped.state.copy()
+        state = env.unwrapped._get_obs().copy()
         command_start = time.perf_counter()
         action = mppi.command(state)
         elapsed = time.perf_counter() - command_start
@@ -622,4 +646,35 @@ def run_mppi(mppi, env, retrain_dynamics, retrain_after_iter=50, iter=1000, rend
             dataset.zero_()
         dataset[di, :mppi.nx] = torch.tensor(state, dtype=mppi.U.dtype)
         dataset[di, mppi.nx:] = action
+        actions.append(action)
+    #import numpy as np
+    #actions = np.array([a.cpu().numpy() for a in actions])
+    #random_actions = np.random.randn(*actions.shape)
+    #import colorednoise
+    #cn1 = colorednoise.powerlaw_psd_gaussian(1., size=actions.shape[:1])
+    #cn2 = colorednoise.powerlaw_psd_gaussian(2., size=actions.shape[:1])
+    #import matplotlib.pyplot as plt
+    #from scipy.signal import welch
+    #from scipy.signal import lfilter as scipy_lfilter
+    #from scipy.signal import butter#, lfilter
+    #lp_filter_b, lp_filter_a = butter(1, 0.8, fs=mppi.sampling_freq,
+    #                                    btype='low', analog=False)
+    #filtered_actions = scipy_lfilter(lp_filter_b, lp_filter_a, 10. * random_actions[:, 0], axis=-1)
+    #nperseg = 1024
+    #f, psd = welch(actions[:, 0], fs=mppi.sampling_freq, nperseg=nperseg)
+    #f_random, psd_random = welch(random_actions[:, 0], fs=mppi.sampling_freq, nperseg=nperseg)
+    #f_lp, psd_lp = welch(filtered_actions, fs=mppi.sampling_freq, nperseg=nperseg)
+    #f_cn1, psd_cn1 = welch(cn1, fs=mppi.sampling_freq, nperseg=nperseg)
+    #f_cn2, psd_cn2 = welch(cn2, fs=mppi.sampling_freq, nperseg=nperseg)
+
+    #plt.plot(f, psd, label="mppi")
+    #plt.plot(f_random, psd_random, label="random")
+    #plt.plot(f_lp, psd_lp, label="lp")
+    #plt.plot(f_cn1, psd_cn1, label="cn1")
+    #plt.plot(f_cn2, psd_cn2, label="cn2")
+    #plt.legend()
+    #plt.xscale("log")
+    #plt.yscale("log")
+    #plt.show()
+
     return total_reward, dataset

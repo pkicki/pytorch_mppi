@@ -5,3 +5,4 @@ dist
 *.png
 tests/images
 tests/*.pkl
+tests/exp_results
