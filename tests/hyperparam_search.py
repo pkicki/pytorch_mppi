@@ -48,4 +48,4 @@ def experiment(
     print(study.best_params)
 
 if __name__ == "__main__":
-    run_experiment(run)
+    run_experiment(experiment)
