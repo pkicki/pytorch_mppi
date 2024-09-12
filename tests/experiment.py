@@ -2,6 +2,7 @@ import gymnasium as gym
 import numpy as np
 import torch
 from dynamics_models.half_cheetah import HalfCheetah
+from dynamics_models.humanoid import Humanoid
 from dynamics_models.pendulum import Pendulum
 from dynamics_models.walker_2d import Walker2D
 from pytorch_mppi import mppi
@@ -14,9 +15,10 @@ torch.set_num_threads(1)
     
 #@single_experiment
 #def experiment(env: str = "pendulum",
-def experiment(env: str = "half_cheetah",
+#def experiment(env: str = "half_cheetah",
 #def experiment(env: str = "walker",
-               n_episodes: int = 2,    
+def experiment(env: str = "humanoid",
+               n_episodes: int = 100,    
                #horizon: int = 15,
                horizon: int = 30,
                n_samples: int = 100,
@@ -54,6 +56,11 @@ def experiment(env: str = "half_cheetah",
         model = Walker2D()
         noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
         env = gym.make("Walker2d-v4", render_mode="human" if render else None, exclude_current_positions_from_observation=False,
+                       terminate_when_unhealthy=False)
+    elif env == "humanoid":
+        model = Humanoid()
+        noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
+        env = gym.make("Humanoid-v4", render_mode="human" if render else None, exclude_current_positions_from_observation=False,
                        terminate_when_unhealthy=False)
     else:
         raise ValueError("Unknown environment")
