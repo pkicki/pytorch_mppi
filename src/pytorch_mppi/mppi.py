@@ -625,7 +625,7 @@ class KMPPI(MPPI):
 def run_mppi(mppi, env, retrain_dynamics, retrain_after_iter=50, iter=1000, render=True):
     dataset = torch.zeros((retrain_after_iter, mppi.nx + mppi.nu), dtype=mppi.U.dtype, device=mppi.d)
     total_reward = 0
-    actions = []
+    #actions = []
     for i in range(iter):
         #state = env.unwrapped.state.copy()
         state = env.unwrapped._get_obs().copy()
@@ -646,7 +646,7 @@ def run_mppi(mppi, env, retrain_dynamics, retrain_after_iter=50, iter=1000, rend
             dataset.zero_()
         dataset[di, :mppi.nx] = torch.tensor(state, dtype=mppi.U.dtype)
         dataset[di, mppi.nx:] = action
-        actions.append(action)
+        #actions.append(action)
     #import numpy as np
     #actions = np.array([a.cpu().numpy() for a in actions])
     #random_actions = np.random.randn(*actions.shape)
