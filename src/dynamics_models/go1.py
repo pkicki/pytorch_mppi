@@ -1,3 +1,4 @@
+import torch
 from dynamics_models.gym_model import GymModel
 import numpy as np
 
@@ -25,4 +26,5 @@ class Go1(GymModel):
             healthy_reward = is_healthy.astype(np.float64) * self.env.unwrapped._healthy_reward
 
         reward = forward_reward + healthy_reward - control_cost
+        reward = torch.tensor(reward, device=state.device, dtype=state.dtype)
         return -reward

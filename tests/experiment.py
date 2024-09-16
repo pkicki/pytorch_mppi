@@ -5,13 +5,12 @@ import numpy as np
 import torch
 from dynamics_models.acrobot import Acrobot
 from dynamics_models.go1 import Go1
-from dynamics_models.gym_model import GymModel
 from dynamics_models.half_cheetah import HalfCheetah
 from dynamics_models.hopper import Hopper
 from dynamics_models.humanoid import Humanoid
-from dynamics_models.inverted_pendulum import InvertedPendulum
 from dynamics_models.neural_model import NeuralModel, RolloutDataset
 from dynamics_models.pendulum import Pendulum
+from dynamics_models.swimmer import Swimmer
 from dynamics_models.walker_2d import Walker2D
 from pytorch_mppi import mppi
 from gymnasium import logger as gym_log
@@ -105,8 +104,7 @@ def experiment(env_name: str = "hopper",
             include_cfrc_ext_in_observation=False,
             exclude_current_positions_from_observation=False,
             reset_noise_scale=0.1,
-            frame_skip=5,
-            max_episode_steps=100,
+            frame_skip=25,
             terminate_when_unhealthy=False,
             render_mode="human" if render else None,
         )
@@ -135,6 +133,10 @@ def experiment(env_name: str = "hopper",
         env = gym.make("Hopper-v5", render_mode="human" if render else None, exclude_current_positions_from_observation=False,
                          terminate_when_unhealthy=False)
         model = Hopper(deepcopy(env))
+        noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
+    elif env_name == "swimmer":
+        env = gym.make("Swimmer-v5", render_mode="human" if render else None, exclude_current_positions_from_observation=False)
+        model = Swimmer(deepcopy(env))
         noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
     else:
         raise ValueError("Unknown environment")
