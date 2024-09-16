@@ -13,8 +13,10 @@ class Pendulum:
 
     def dynamics(self, state, perturbed_action):
         # true dynamics from gym
-        th = state[:, 0].view(-1, 1)
-        thdot = state[:, 1].view(-1, 1)
+        cos_th = state[:, 0].view(-1, 1)
+        sin_th = state[:, 1].view(-1, 1)
+        thdot = state[:, 2].view(-1, 1)
+        th = np.arctan2(sin_th, cos_th)
 
         g = 10
         m = 1
@@ -28,12 +30,15 @@ class Pendulum:
         newthdot = np.clip(newthdot, -8, 8)
         newth = th + newthdot * dt
 
-        state = torch.cat((newth, newthdot), dim=1)
+        #state = torch.cat((newth, newthdot), dim=1)
+        state = torch.cat((np.cos(newth), np.sin(newth), newthdot), dim=1)
         return state
 
     def running_cost(self, state, action):
-        theta = state[:, 0]
-        theta_dt = state[:, 1]
+        cos_th = state[:, 0]
+        sin_th = state[:, 1]
+        theta = np.arctan2(sin_th, cos_th)
+        theta_dt = state[:, 2]
         action = action[:, 0]
         #cost = angle_normalize(theta) ** 2 + 0.1 * theta_dt ** 2
         cost = angle_normalize(theta) ** 2 + 0.1 * theta_dt ** 2 + 0.001 * (action**2)
@@ -41,3 +46,12 @@ class Pendulum:
 
     def train(self, new_data):
         pass
+
+    @property
+    def state_dim(self):
+        return 2
+    
+    @property
+    def action_dim(self):
+        return 1
+

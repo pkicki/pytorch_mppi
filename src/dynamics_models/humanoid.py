@@ -3,8 +3,10 @@ import torch
 import numpy as np
 import gymnasium as gym
 
+from dynamics_models.mujoco import MuJoCo
 
-class Humanoid:
+
+class Humanoid(MuJoCo):
     def __init__(self):
         #self.terminate_when_unhealthy = True
         self.terminate_when_unhealthy = False
@@ -13,18 +15,6 @@ class Humanoid:
         self.env.reset()
         self.action_low = -0.4 * np.ones(self.env.action_space.shape)
         self.action_high = 0.4 * np.ones(self.env.action_space.shape)
-
-    def dynamics(self, state, perturbed_action):
-        state_np = state.detach().numpy()
-        perturbed_action_np = perturbed_action.detach().numpy()
-        nq = self.env.unwrapped.model.nq
-        nv = self.env.unwrapped.model.nv
-        for i in range(state_np.shape[0]):
-            self.env.set_state(state_np[i, :nq],
-                               state_np[i, nq:nq+nv])
-            state_np[i, :], _, _, _, _ = self.env.step(perturbed_action_np[i])
-        state = torch.tensor(state_np, device=state.device, dtype=state.dtype)
-        return state
 
     def running_cost(self, state, action):
         state_np = state.detach().numpy()
@@ -45,6 +35,3 @@ class Humanoid:
 
         reward = forward_reward + healthy_reward - control_cost
         return -reward
-
-    def train(self, new_data):
-        pass

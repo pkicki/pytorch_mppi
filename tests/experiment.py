@@ -19,14 +19,14 @@ def no_train(new_data):
     pass
     
 #@single_experiment
-#def experiment(env: str = "pendulum",
-#def experiment(env: str = "half_cheetah",
-#def experiment(env: str = "walker",
-#def experiment(env: str = "humanoid",
-def experiment(env: str = "humanoid",
+def experiment(env_name: str = "pendulum",
+#def experiment(env_name: str = "half_cheetah",
+#def experiment(env_name: str = "walker",
+#def experiment(env_name: str = "humanoid",
+#def experiment(env_name: str = "humanoid",
                neural_model: bool = False,
-               #dataset_path: str = None,
-               dataset_path: str = "humanoid_fcem_nc7_sig7_h30_ns100.pt",
+               dataset_path: str = None,
+               #dataset_path: str = "humanoid_fcem_nc7_sig7_h30_ns100.pt",
                n_episodes_per_fit: int = -1,
                #neural_model: bool = True,
                #n_episodes_per_fit: int = 2,
@@ -68,19 +68,19 @@ def experiment(env: str = "humanoid",
     if dataset_path is not None:
         dataset.load_data(dataset_path)
 
-    if env == "pendulum":
+    if env_name == "pendulum":
         model = Pendulum()
         env = gym.make("Pendulum-v1", render_mode="human" if render else None)
-    elif env == "half_cheetah":
+    elif env_name == "half_cheetah":
         model = HalfCheetah()
         noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
         env = gym.make("HalfCheetah-v4", render_mode="human" if render else None, exclude_current_positions_from_observation=False)
-    elif env == "walker":
+    elif env_name == "walker":
         model = Walker2D()
         noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
         env = gym.make("Walker2d-v4", render_mode="human" if render else None, exclude_current_positions_from_observation=False,
                        terminate_when_unhealthy=False)
-    elif env == "humanoid":
+    elif env_name == "humanoid":
         model = Humanoid()
         noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
         env = gym.make("Humanoid-v4", render_mode="human" if render else None, exclude_current_positions_from_observation=False,
@@ -88,28 +88,26 @@ def experiment(env: str = "humanoid",
     else:
         raise ValueError("Unknown environment")
 
-    state_dim = env.unwrapped.model.nq + env.unwrapped.model.nv
-    action_dim = env.action_space.shape[0]
+    state_dim = model.state_dim
+    action_dim = model.action_dim
 
     if neural_model:
         model = NeuralModel(model, state_dim, action_dim, device=d, dtype=dtype)
 
+    dt = env.unwrapped.dt
+    nx = env.observation_space.shape[0]
+    mppi_gym = mppi.MPPI(model.dynamics, model.running_cost, nx, noise_sigma, num_samples=n_samples, horizon=horizon,
+                        lambda_=lambda_, u_min=torch.tensor(env.unwrapped.action_space.low, device=d),
+                        u_max=torch.tensor(env.unwrapped.action_space.high, device=d), device=d,
+                        noise_beta=noise_beta, noise_cutoff_freq=noise_cutoff_freq, sampling_freq=1./dt)
 
     rewards = []
     trajectories = []
     for i in range(n_episodes):
         env.reset()
-        if env == "pendulum" and downward_start:
-            env.state = env.unwrapped.state = [np.pi, 1]
-
-        dt = env.unwrapped.dt
-        nx = env.observation_space.shape[0]
-        mppi_gym = mppi.MPPI(model.dynamics, model.running_cost, nx, noise_sigma, num_samples=n_samples, horizon=horizon,
-                            lambda_=lambda_, u_min=torch.tensor(env.unwrapped.action_space.low, device=d),
-                            u_max=torch.tensor(env.unwrapped.action_space.high, device=d), device=d,
-                            noise_beta=noise_beta, noise_cutoff_freq=noise_cutoff_freq, sampling_freq=1./dt)
-        #total_reward, history = mppi.run_mppi(mppi_gym, env, model.train, iter=100, retrain_after_iter=10, render=render)
-        total_reward, history = mppi.run_mppi(mppi_gym, env, no_train, iter=100, retrain_after_iter=100, render=render)
+        if env_name == "pendulum" and downward_start:
+            env.state = env.unwrapped.state = [np.pi, 0]
+        total_reward, history = mppi.run_mppi(mppi_gym, env, model.train, iter=100, retrain_after_iter=100, render=render)
         print(f"Episode {i} Total reward", total_reward)
         states = history[..., :state_dim]
         actions = history[..., -action_dim:]
