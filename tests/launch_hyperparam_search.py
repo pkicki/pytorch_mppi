@@ -53,6 +53,6 @@ for alg, n_samples, horizon in product(algs, n_sampless, horizons):
         n_samples__=n_samples,
         horizon__=horizon,
         n_episodes=1,
-        env_name="half_cheetah",
+        n_steps=100,
     )
 launcher.run(LOCAL, TEST)

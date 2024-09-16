@@ -5,11 +5,15 @@ from experiment_launcher import single_experiment, run_experiment
 
 @single_experiment
 def experiment(
-    env_name: str = "half_cheetah",
-    n_episodes: int = 100,
-    horizon: int = 30,
+    #env_name: str = "half_cheetah",
+    #env_name: str = "walker",
+    #env_name: str = "pendulum",
+    env_name: str = "hopper",
+    n_episodes: int = 1,
+    n_steps: int = 100,
+    horizon: int = 15,
     n_samples: int = 100,
-    alg: str = "fcem",
+    alg: str = "icem",
     results_dir: str = "./results",
     seed: int = 444,
     ):
@@ -27,6 +31,7 @@ def experiment(
         else:
             raise ValueError("Unknown algorithm")
         mean_reward = mppi_experiment(env_name=env_name,
+                                      n_steps=n_steps,
                                       n_episodes=n_episodes,
                                       horizon=horizon,
                                       n_samples=n_samples,
@@ -39,8 +44,8 @@ def experiment(
 
         return mean_reward
 
-    db_name = "hyperparameter_search.db"
-    #db_name = "test.db"
+    #db_name = "hyperparameter_search.db"
+    db_name = "test.db"
     storage_name = f"sqlite:///{db_name}"
     study = optuna.create_study(study_name=f"{env_name}_h{horizon}_ns{n_samples}_{alg}",
                                 storage=storage_name, load_if_exists=True,
