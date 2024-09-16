@@ -16,7 +16,8 @@ def experiment(
 
     def objective(trial):
         #x = trial.suggest_float('x', -10, 10)
-        noise_sigma = trial.suggest_float('noise_sigma', 0.1, 10.)
+        #noise_sigma = trial.suggest_float('noise_sigma', 0.1, 10.)
+        noise_sigma = trial.suggest_float('noise_sigma', 0.1, 20.)
         if alg == "icem":
             noise_beta = trial.suggest_float('noise_beta', 0.1, 10.)
             noise_cutoff_freq = None
@@ -25,7 +26,7 @@ def experiment(
             noise_cutoff_freq = trial.suggest_float('noise_cutoff_freq', 0.1, 10.)
         else:
             raise ValueError("Unknown algorithm")
-        mean_reward = mppi_experiment(env=env_name,
+        mean_reward = mppi_experiment(env_name=env_name,
                                       n_episodes=n_episodes,
                                       horizon=horizon,
                                       n_samples=n_samples,
