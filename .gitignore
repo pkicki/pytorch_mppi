@@ -6,5 +6,6 @@ dist
 tests/images
 tests/*.pkl
 tests/exp_results
+tests/results
 tests/datasets
 tests/logs
