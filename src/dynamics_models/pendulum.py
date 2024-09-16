@@ -10,6 +10,7 @@ def angle_normalize(x):
 class Pendulum:
     action_low = -2.0
     action_high = 2.0
+    dt = 0.05
 
     def dynamics(self, state, perturbed_action):
         # true dynamics from gym
@@ -21,14 +22,13 @@ class Pendulum:
         g = 10
         m = 1
         l = 1
-        dt = 0.05
 
         u = perturbed_action
         u = torch.clamp(u, -2, 2)
 
         newthdot = thdot + (3 * g / (2 * l) * np.sin(th) + 3.0 / (m * l ** 2) * u) * dt
         newthdot = np.clip(newthdot, -8, 8)
-        newth = th + newthdot * dt
+        newth = th + newthdot * self.dt
 
         #state = torch.cat((newth, newthdot), dim=1)
         state = torch.cat((np.cos(newth), np.sin(newth), newthdot), dim=1)
