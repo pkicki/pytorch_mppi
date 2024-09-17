@@ -3,18 +3,13 @@ import torch
 import numpy as np
 import gymnasium as gym
 
-from dynamics_models.mujoco import MuJoCo
+from dynamics_models.gym_model import GymModel
 
 
-class Walker2D(MuJoCo):
-    def __init__(self):
-        #self.terminate_when_unhealthy = True
-        self.terminate_when_unhealthy = False
-        self.env = gym.make("Walker2d-v4", exclude_current_positions_from_observation=False,
-                            terminate_when_unhealthy=self.terminate_when_unhealthy)
-        self.env.reset()
-        self.action_low = -np.ones(self.env.action_space.shape)
-        self.action_high = np.ones(self.env.action_space.shape)
+class Walker2D(GymModel):
+    def __init__(self, env):
+        super(Walker2D, self).__init__(env)
+        self.terminate_when_unhealthy = self.env.unwrapped._terminate_when_unhealthy
 
     def running_cost(self, state, action):
         state_np = state.detach().numpy()
@@ -34,8 +29,9 @@ class Walker2D(MuJoCo):
         else:
             healthy_reward = is_healthy.astype(np.float64) * self.env.unwrapped._healthy_reward
 
-        x_velocity = state_np[:, 9]
+        x_velocity = state_np[:, self.env.unwrapped.model.nq]
         control_cost = self.env.unwrapped._ctrl_cost_weight * np.sum(np.square(action_np), axis=-1)
         forward_reward = self.env.unwrapped._forward_reward_weight * x_velocity
         reward = forward_reward - control_cost + healthy_reward
+        reward = torch.tensor(reward, device=state.device, dtype=state.dtype)
         return -reward

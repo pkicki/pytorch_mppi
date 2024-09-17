@@ -8,6 +8,7 @@ from dynamics_models.go1 import Go1
 from dynamics_models.half_cheetah import HalfCheetah
 from dynamics_models.hopper import Hopper
 from dynamics_models.humanoid import Humanoid
+from dynamics_models.humanoid_standup import HumanoidStandup
 from dynamics_models.neural_model import NeuralModel, RolloutDataset
 from dynamics_models.pendulum import Pendulum
 from dynamics_models.swimmer import Swimmer
@@ -31,8 +32,11 @@ def no_train(new_data):
 #def experiment(env_name: str = "acrobot",
 #def experiment(env_name: str = "go1",
 #def experiment(env_name: str = "walker",
-def experiment(env_name: str = "hopper",
+#def experiment(env_name: str = "half_cheetah",
+#def experiment(env_name: str = "hopper",
+#def experiment(env_name: str = "swimmer",
 #def experiment(env_name: str = "humanoid",
+def experiment(env_name: str = "humanoid_standup",
                neural_model: bool = False,
                dataset_path: str = None,
                #dataset_path: str = "humanoid_fcem_nc7_sig7_h30_ns100.pt",
@@ -111,14 +115,14 @@ def experiment(env_name: str = "hopper",
         model = Go1(deepcopy(env))
         noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
     elif env_name == "half_cheetah":
-        model = HalfCheetah()
+        env = gym.make("HalfCheetah-v5", render_mode="human" if render else None, exclude_current_positions_from_observation=False)
+        model = HalfCheetah(deepcopy(env))
         noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
-        env = gym.make("HalfCheetah-v4", render_mode="human" if render else None, exclude_current_positions_from_observation=False)
     elif env_name == "walker":
-        model = Walker2D()
-        noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
-        env = gym.make("Walker2d-v4", render_mode="human" if render else None, exclude_current_positions_from_observation=False,
+        env = gym.make("Walker2d-v5", render_mode="human" if render else None, exclude_current_positions_from_observation=False,
                        terminate_when_unhealthy=False)
+        model = Walker2D(deepcopy(env))
+        noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
     elif env_name == "humanoid":
         env = gym.make("Humanoid-v5", render_mode="human" if render else None, exclude_current_positions_from_observation=False,
                        #terminate_when_unhealthy=False)
@@ -128,6 +132,14 @@ def experiment(env_name: str = "hopper",
                        include_qfrc_actuator_in_observation=False,
                        include_cfrc_ext_in_observation=False)
         model = Humanoid(deepcopy(env))
+        noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
+    elif env_name == "humanoid_standup":
+        env = gym.make("HumanoidStandup-v5", render_mode="human" if render else None, exclude_current_positions_from_observation=False,
+                       include_cinert_in_observation=False,
+                       include_cvel_in_observation=False,
+                       include_qfrc_actuator_in_observation=False,
+                       include_cfrc_ext_in_observation=False)
+        model = HumanoidStandup(deepcopy(env))
         noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
     elif env_name == "hopper":
         env = gym.make("Hopper-v5", render_mode="human" if render else None, exclude_current_positions_from_observation=False,
@@ -153,8 +165,7 @@ def experiment(env_name: str = "hopper",
     action_ub = torch.tensor(model.action_high, device=d, dtype=dtype)
     #nx = env.observation_space.shape[0]
     mppi_gym = mppi.MPPI(model.dynamics, model.running_cost, nx, noise_sigma, num_samples=n_samples, horizon=horizon,
-                        lambda_=lambda_, u_min=action_lb,
-                        u_max=torch.tensor(action_ub, device=d), device=d,
+                        lambda_=lambda_, u_min=action_lb, u_max=action_ub, device=d,
                         noise_beta=noise_beta, noise_cutoff_freq=noise_cutoff_freq, sampling_freq=1./dt)
 
     rewards = []
