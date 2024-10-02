@@ -7,7 +7,7 @@ from dynamics_models.acrobot import Acrobot
 from dynamics_models.go1 import Go1
 from dynamics_models.half_cheetah import HalfCheetah
 from dynamics_models.hopper import Hopper
-from dynamics_models.humanoid import Humanoid
+from dynamics_models.humanoid import Humanoid, HumanoidBrax
 from dynamics_models.humanoid_standup import HumanoidStandup
 from dynamics_models.neural_model import NeuralModel, RolloutDataset
 from dynamics_models.pendulum import Pendulum
@@ -18,6 +18,7 @@ from gymnasium import logger as gym_log
 import wandb
 
 from dm_control import suite
+import matplotlib.pyplot as plt
 
 from experiment_launcher import single_experiment, run_experiment
 
@@ -35,8 +36,8 @@ def no_train(new_data):
 #def experiment(env_name: str = "half_cheetah",
 #def experiment(env_name: str = "hopper",
 #def experiment(env_name: str = "swimmer",
-#def experiment(env_name: str = "humanoid",
-def experiment(env_name: str = "humanoid_standup",
+def experiment(env_name: str = "humanoid",
+#def experiment(env_name: str = "humanoid_standup",
                neural_model: bool = False,
                dataset_path: str = None,
                #dataset_path: str = "humanoid_fcem_nc7_sig7_h30_ns100.pt",
@@ -45,22 +46,24 @@ def experiment(env_name: str = "humanoid_standup",
                #n_episodes_per_fit: int = 2,
                #n_warmup_episodes: int = 10,
                n_episodes: int = 3,
-               #n_steps: int = 100,
                n_steps: int = 200,
+               #n_steps: int = 200,
                #horizon: int = 15,
-               horizon: int = 50,
-               n_samples: int = 30,
-               #n_samples: int = 10,
+               horizon: int = 30,
+               #horizon: int = 100,
+               #n_samples: int = 30,
+               n_samples: int = 100,
                #noise_sigma: float = 10.0,
-               noise_sigma: float = 15.0,
-               lambda_: float = 1.0,
+               noise_sigma: float = 5.0,
+               #lambda_: float = 1.0,
+               lambda_: float = 1e-2,
                downward_start: bool = True,
                device: str = "cpu",
                dtype: str = "double",
-               noise_beta: float = None,
-               #noise_cutoff_freq: float = None,
-               #noise_beta: float = 0.2,
-               noise_cutoff_freq: float = 1.0,
+               #noise_beta: float = None,
+               noise_cutoff_freq: float = None,
+               noise_beta: float = 2.0,
+               #noise_cutoff_freq: float = 5.0,
                #render: bool = False,
                render: bool = True,
                results_dir: str = "./results",
@@ -131,8 +134,10 @@ def experiment(env_name: str = "humanoid_standup",
                        include_cvel_in_observation=False,
                        include_qfrc_actuator_in_observation=False,
                        include_cfrc_ext_in_observation=False)
-        model = Humanoid(deepcopy(env))
-        noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
+        #model = Humanoid(deepcopy(env))
+        model = HumanoidBrax(n_envs=n_samples)
+        noise_sigma = noise_sigma * torch.eye(model.action_dim, device=d, dtype=dtype)
+        #noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
     elif env_name == "humanoid_standup":
         env = gym.make("HumanoidStandup-v5", render_mode="human" if render else None, exclude_current_positions_from_observation=False,
                        include_cinert_in_observation=False,
@@ -164,7 +169,7 @@ def experiment(env_name: str = "humanoid_standup",
     action_lb = torch.tensor(model.action_low, device=d, dtype=dtype) 
     action_ub = torch.tensor(model.action_high, device=d, dtype=dtype)
     #nx = env.observation_space.shape[0]
-    mppi_gym = mppi.MPPI(model.dynamics, model.running_cost, nx, noise_sigma, num_samples=n_samples, horizon=horizon,
+    mppi_gym = mppi.MPPI(model.dynamics, model.running_cost, model.rollout, nx, noise_sigma, num_samples=n_samples, horizon=horizon,
                         lambda_=lambda_, u_min=action_lb, u_max=action_ub, device=d,
                         noise_beta=noise_beta, noise_cutoff_freq=noise_cutoff_freq, sampling_freq=1./dt)
 
@@ -188,6 +193,10 @@ def experiment(env_name: str = "humanoid_standup",
             model.train(dataset())
         wandb.log({"total_reward": total_reward}, step=i)
         rewards.append(total_reward)
+        #for i in range(states.shape[-1]):
+        #    plt.subplot(4, 5, i+1)
+        #    plt.plot(states[:, i])
+        #plt.show()
         t1 = perf_counter()
         print(f"Episode {i} Time", t1 - t0)
         #trajectories.append(history)
