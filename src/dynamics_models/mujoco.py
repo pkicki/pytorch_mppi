@@ -15,7 +15,7 @@ class MuJoCo:
         #t1 = perf_counter()
         #print(t1 - t0)
         state = torch.tensor(state_np, device=state.device, dtype=state.dtype)
-        return state
+        return state, None
 
     @property
     def state_dim(self):

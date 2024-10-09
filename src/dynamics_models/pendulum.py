@@ -26,13 +26,13 @@ class Pendulum:
         u = perturbed_action
         u = torch.clamp(u, -2, 2)
 
-        newthdot = thdot + (3 * g / (2 * l) * np.sin(th) + 3.0 / (m * l ** 2) * u) * dt
+        newthdot = thdot + (3 * g / (2 * l) * np.sin(th) + 3.0 / (m * l ** 2) * u) * Pendulum.dt
         newthdot = np.clip(newthdot, -8, 8)
         newth = th + newthdot * self.dt
 
         #state = torch.cat((newth, newthdot), dim=1)
         state = torch.cat((np.cos(newth), np.sin(newth), newthdot), dim=1)
-        return state
+        return state, None
 
     def running_cost(self, state, action):
         cos_th = state[:, 0]
@@ -49,7 +49,7 @@ class Pendulum:
 
     @property
     def state_dim(self):
-        return 2
+        return 3
     
     @property
     def action_dim(self):

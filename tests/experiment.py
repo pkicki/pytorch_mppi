@@ -3,16 +3,7 @@ from time import perf_counter
 import gymnasium as gym
 import numpy as np
 import torch
-from dynamics_models.acrobot import Acrobot
-from dynamics_models.go1 import Go1
-from dynamics_models.half_cheetah import HalfCheetah
-from dynamics_models.hopper import Hopper
-from dynamics_models.humanoid import Humanoid, HumanoidBrax
-from dynamics_models.humanoid_standup import HumanoidStandup
 from dynamics_models.neural_model import NeuralModel, RolloutDataset
-from dynamics_models.pendulum import Pendulum
-from dynamics_models.swimmer import Swimmer
-from dynamics_models.walker_2d import Walker2D
 from pytorch_mppi import mppi
 from gymnasium import logger as gym_log
 import wandb
@@ -21,6 +12,8 @@ from dm_control import suite
 import matplotlib.pyplot as plt
 
 from experiment_launcher import single_experiment, run_experiment
+
+from pytorch_mppi.utils import load_env_and_model
 
 torch.set_num_interop_threads(1)
 torch.set_num_threads(1)
@@ -38,6 +31,8 @@ def no_train(new_data):
 #def experiment(env_name: str = "swimmer",
 def experiment(env_name: str = "humanoid",
 #def experiment(env_name: str = "humanoid_standup",
+               simulator: str = "brax",
+               #simulator: str = "gym",
                neural_model: bool = False,
                dataset_path: str = None,
                #dataset_path: str = "humanoid_fcem_nc7_sig7_h30_ns100.pt",
@@ -87,77 +82,17 @@ def experiment(env_name: str = "humanoid",
     if dataset_path is not None:
         dataset.load_data(dataset_path)
 
-    if env_name == "pendulum":
-        model = Pendulum()
-        env = gym.make("Pendulum-v1", render_mode="human" if render else None)
-    elif env_name == "acrobot":
-        model = Acrobot()
-        env = gym.make("dm_control/acrobot-swingup-v0", render_mode="human" if render else None)
-        from shimmy.utils.dm_env import dm_obs2gym_obs
-        def get_obs(self):
-            return np.concat([self.physics.data.qpos, self.physics.data.qvel])
-        #env.unwrapped._get_obs = get_obs
-        setattr(type(env.unwrapped), "_get_obs", get_obs)
-    elif env_name == "go1":
-        env = gym.make(
-            'Ant-v5',
-            xml_file='./mujoco_menagerie/unitree_go1/scene.xml',
-            forward_reward_weight=1,  # kept the same as the 'Ant' environment
-            ctrl_cost_weight=0.05,  # changed because of the stronger motors of `Go1`
-            contact_cost_weight=5e-4,  # kept the same as the 'Ant' environment
-            healthy_reward=1,  # kept the same as the 'Ant' environment
-            main_body=1,  # represents the "trunk" of the `Go1` robot
-            healthy_z_range=(0.195, 0.75),
-            include_cfrc_ext_in_observation=False,
-            exclude_current_positions_from_observation=False,
-            reset_noise_scale=0.1,
-            frame_skip=25,
-            terminate_when_unhealthy=False,
-            render_mode="human" if render else None,
-        )
-        model = Go1(deepcopy(env))
-        noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
-    elif env_name == "half_cheetah":
-        env = gym.make("HalfCheetah-v5", render_mode="human" if render else None, exclude_current_positions_from_observation=False)
-        model = HalfCheetah(deepcopy(env))
-        noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
-    elif env_name == "walker":
-        env = gym.make("Walker2d-v5", render_mode="human" if render else None, exclude_current_positions_from_observation=False,
-                       terminate_when_unhealthy=False)
-        model = Walker2D(deepcopy(env))
-        noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
-    elif env_name == "humanoid":
-        env = gym.make("Humanoid-v5", render_mode="human" if render else None, exclude_current_positions_from_observation=False,
-                       #terminate_when_unhealthy=False)
-                       terminate_when_unhealthy=False,
-                       include_cinert_in_observation=False,
-                       include_cvel_in_observation=False,
-                       include_qfrc_actuator_in_observation=False,
-                       include_cfrc_ext_in_observation=False)
-        #model = Humanoid(deepcopy(env))
-        model = HumanoidBrax(n_envs=n_samples)
-        noise_sigma = noise_sigma * torch.eye(model.action_dim, device=d, dtype=dtype)
-        #noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
-    elif env_name == "humanoid_standup":
-        env = gym.make("HumanoidStandup-v5", render_mode="human" if render else None, exclude_current_positions_from_observation=False,
-                       include_cinert_in_observation=False,
-                       include_cvel_in_observation=False,
-                       include_qfrc_actuator_in_observation=False,
-                       include_cfrc_ext_in_observation=False)
-        model = HumanoidStandup(deepcopy(env))
-        noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
-    elif env_name == "hopper":
-        env = gym.make("Hopper-v5", render_mode="human" if render else None, exclude_current_positions_from_observation=False,
-                         terminate_when_unhealthy=False)
-        model = Hopper(deepcopy(env))
-        noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
-    elif env_name == "swimmer":
-        env = gym.make("Swimmer-v5", render_mode="human" if render else None, exclude_current_positions_from_observation=False)
-        model = Swimmer(deepcopy(env))
-        noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
-    else:
-        raise ValueError("Unknown environment")
+    env, model = load_env_and_model(env_name, simulator, n_envs=n_samples, render=render)
 
+    #s = env.reset()
+    #for i in range(10):
+    #    t0 = perf_counter()
+    #    env.step(np.zeros(model.action_dim))
+    #    t1 = perf_counter()
+    #    print(f"Step time", t1 - t0)
+    #assert False
+
+    noise_sigma = noise_sigma * torch.eye(model.action_dim, device=d, dtype=dtype)
     state_dim = model.state_dim
     action_dim = model.action_dim
 
@@ -169,7 +104,7 @@ def experiment(env_name: str = "humanoid",
     action_lb = torch.tensor(model.action_low, device=d, dtype=dtype) 
     action_ub = torch.tensor(model.action_high, device=d, dtype=dtype)
     #nx = env.observation_space.shape[0]
-    mppi_gym = mppi.MPPI(model.dynamics, model.running_cost, model.rollout, nx, noise_sigma, num_samples=n_samples, horizon=horizon,
+    mppi_gym = mppi.MPPI(model.dynamics, model.dynamics, model.running_cost, nx, noise_sigma, num_samples=n_samples, horizon=horizon,
                         lambda_=lambda_, u_min=action_lb, u_max=action_ub, device=d,
                         noise_beta=noise_beta, noise_cutoff_freq=noise_cutoff_freq, sampling_freq=1./dt)
 
@@ -199,6 +134,7 @@ def experiment(env_name: str = "humanoid",
         #plt.show()
         t1 = perf_counter()
         print(f"Episode {i} Time", t1 - t0)
+        env.save_rendering(f"humanoid_200steps_{i}.html")
         #trajectories.append(history)
     #trajectories = np.array(trajectories)
     #np.save(f"half_cheetah_mppi_trajectories_lp7_sig7.npy", trajectories)

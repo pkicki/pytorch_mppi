@@ -1,6 +1,7 @@
 import logging
 import time
 import typing
+import copy
 
 import torch
 from torch.distributions.multivariate_normal import MultivariateNormal
@@ -48,7 +49,7 @@ class MPPI():
     based off of https://github.com/ferreirafabio/mppi_pendulum
     """
 
-    def __init__(self, dynamics, running_cost, rollout, nx, noise_sigma, num_samples=100, horizon=15, device="cpu",
+    def __init__(self, dynamics, reference_dynamics, running_cost, nx, noise_sigma, num_samples=100, horizon=15, device="cpu",
                  terminal_state_cost=None,
                  lambda_=1.,
                  noise_mu=None,
@@ -93,7 +94,6 @@ class MPPI():
             nominal trajectory, may output a number of action trajectories fewer than horizon
         :param noise_abs_cost: Whether to use the absolute value of the action noise to avoid bias when all states have the same cost
         """
-        self._rollout = rollout
         self.d = device
         self.dtype = noise_sigma.dtype
         self.K = num_samples  # N_SAMPLES
@@ -153,6 +153,7 @@ class MPPI():
 
         self.step_dependency = step_dependent_dynamics
         self.F = dynamics
+        self.reference_dynamics = reference_dynamics
         self.running_cost = running_cost
         self.terminal_state_cost = terminal_state_cost
         self.sample_null_action = sample_null_action
@@ -270,35 +271,23 @@ class MPPI():
         else:
             state = self.state.view(1, -1).repeat(K, 1)
 
-        # rollout action trajectory M times to estimate expected cost
-        state = state.repeat(self.M, 1, 1)
-
-        self._rollout(state, self.u_scale * perturbed_actions)
-        t0 = time.perf_counter()
-        for t in range(T):
-            u = self.u_scale * perturbed_actions[:, t].repeat(self.M, 1, 1)
-            next_state = self._dynamics(state, u, t)
-        t1 = time.perf_counter()
-        self._rollout(state, self.u_scale * perturbed_actions)
-        t2 = time.perf_counter()
-        print(t1 - t0, t2 - t1)
-        assert False
-        
-
         states = []
         actions = []
         for t in range(T):
+            state_ = copy.deepcopy(state)
             times = []
             times.append(time.perf_counter())
             u = self.u_scale * perturbed_actions[:, t].repeat(self.M, 1, 1)
             times.append(time.perf_counter())
-            next_state = self._dynamics(state, u, t)
+            next_state, c = self._dynamics(state, u, t)
+            #next_state_reference = self.reference_dynamics(state_, u)
             times.append(time.perf_counter())
             # potentially handle dynamics in a specific way for the specific action sampler
             next_state = self._sample_specific_dynamics(next_state, state, u, t)
             times.append(time.perf_counter())
-            state = next_state
-            c = self._running_cost(state, u, t)
+            state = next_state[0]
+            if c is None:
+                c = self._running_cost(state, u, t)
             times.append(time.perf_counter())
             cost_samples = cost_samples + c
             if self.M > 1:
@@ -310,7 +299,7 @@ class MPPI():
             actions.append(u)
             times.append(time.perf_counter())
             times = np.array(times)
-            print(times[1:] - times[:-1])
+            #print(times[1:] - times[:-1])
 
         # Actions is K x T x nu
         # States is K x T x nx
@@ -360,12 +349,11 @@ class MPPI():
     def _compute_total_cost_batch(self):
         self._compute_perturbed_action_and_noise()
         if self.noise_abs_cost:
-            action_cost = self.uambda_ * torch.abs(self.noise) @ self.noise_sigma_inv
+            action_cost = self.lambda_ * torch.abs(self.noise) @ self.noise_sigma_inv
             # NOTE: The original paper does self.lambda_ * torch.abs(self.noise) @ self.noise_sigma_inv, but this biases
             # the actions with low noise if all states have the same cost. With abs(noise) we prefer actions close to the
             # nomial trajectory.
         else:
-            #action_cost = self.lambda_ * self.noise @ self.noise_sigma_inv  # Like original paper
             action_cost = self.lambda_ * self.noise @ self.noise_sigma_inv  # Like original paper
 
         rollout_cost, self.states, actions = self._compute_rollout_costs(self.perturbed_action)
@@ -653,7 +641,7 @@ def run_mppi(mppi, env, retrain_dynamics, retrain_after_iter=50, iter=1000, rend
     #actions = []
     for i in range(iter):
         #state = env.unwrapped.state.copy()
-        state = env.unwrapped._get_obs().copy()
+        state = env.get_state()
         command_start = time.perf_counter()
         action = mppi.command(state)
         elapsed = time.perf_counter() - command_start

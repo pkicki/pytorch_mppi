@@ -13,7 +13,10 @@ def experiment(
     n_steps: int = 100,
     horizon: int = 15,
     n_samples: int = 100,
-    alg: str = "icem",
+    #alg: str = "icem",
+    alg: str = "mppi",
+    simulator: str = "gym",
+    #simulator: str = "brax",
     results_dir: str = "./results",
     seed: int = 444,
     ):
@@ -28,9 +31,13 @@ def experiment(
         elif alg == "fcem":
             noise_beta = None
             noise_cutoff_freq = trial.suggest_float('noise_cutoff_freq', 0.1, 10.)
+        elif alg == "mppi":
+            noise_beta = None
+            noise_cutoff_freq = None
         else:
             raise ValueError("Unknown algorithm")
         mean_reward = mppi_experiment(env_name=env_name,
+                                      simulator=simulator,        
                                       n_steps=n_steps,
                                       n_episodes=n_episodes,
                                       horizon=horizon,
