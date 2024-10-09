@@ -134,7 +134,8 @@ def experiment(env_name: str = "humanoid",
         #plt.show()
         t1 = perf_counter()
         print(f"Episode {i} Time", t1 - t0)
-        env.save_rendering(f"humanoid_200steps_{i}.html")
+        if render:
+            env.save_rendering(f"humanoid_200steps_{i}.html")
         #trajectories.append(history)
     #trajectories = np.array(trajectories)
     #np.save(f"half_cheetah_mppi_trajectories_lp7_sig7.npy", trajectories)
