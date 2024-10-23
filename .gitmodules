@@ -1,3 +1,0 @@
-[submodule "src/dynamics_models/rotorpy"]
-	path = src/dynamics_models/rotorpy
-	url = https://github.com/spencerfolk/rotorpy.git
