@@ -3,15 +3,13 @@ from itertools import product
 from experiment_launcher import Launcher, is_local
 import os
 
-os.environ["WANDB_API_KEY"] = "a9819ac569197dbd24b580d854c3041ad75efafd"
-
 LOCAL = is_local()
 TEST = False
 USE_CUDA = False
 
 N_SEEDS = 10
 if LOCAL:
-    N_EXPS_IN_PARALLEL = 4
+    N_EXPS_IN_PARALLEL = 10
 else:
     N_EXPS_IN_PARALLEL = 80
 
@@ -42,7 +40,8 @@ launcher = Launcher(
     compact_dirs=False
 )
 
-algs = ["fcem", "icem"]
+#algs = ["fcem", "icem"]
+algs = ["icem"]
 n_sampless = [100]
 horizons = [30]
 
@@ -53,6 +52,8 @@ for alg, n_samples, horizon in product(algs, n_sampless, horizons):
         n_samples__=n_samples,
         horizon__=horizon,
         n_episodes=1,
+        #env_name="half_cheetah",
+        env_name="pendulum",
         n_steps=100,
     )
 launcher.run(LOCAL, TEST)

@@ -6,7 +6,10 @@ import matplotlib.pyplot as plt
 
 def read_cem(env_name, name):
     r = []
-    for f in os.listdir(f"exp_results/{env_name}/{name}"):
+    dirname = f"exp_results/{env_name}/{name}"
+    if not os.path.exists(dirname):
+        return None
+    for f in os.listdir(dirname):
         if f.endswith(".res"):
             rewards = np.loadtxt(f"exp_results/{env_name}/{name}/{f}")
             r.append([*[float(x) for x in f[:-4].split("_")], np.mean(rewards)])
@@ -29,10 +32,13 @@ def read_cem(env_name, name):
 def plot_results(n_samples, horizon, save=True):
     #env_name = "halfcheetah_running"
     #env_name = "humanoid_standup"
-    env_name = "pendulum"
+    #env_name = "pendulum"
+    env_name = "half_cheetah_adas2"
 
     fcem = read_cem(env_name, f"fcem_s{n_samples}_h{horizon}")
     icem = read_cem(env_name, f"icem_s{n_samples}_h{horizon}")
+    if fcem is None or icem is None:
+        return None
     fcem_max, fcem_min, fcem_med = np.max(fcem[:, 2]), np.min(fcem[:, 2]), np.median(fcem[:, 2])
     icem_max, icem_min, icem_med = np.max(icem[:, 2]), np.min(icem[:, 2]), np.median(icem[:, 2])
     print("FCEM MAX:", fcem_max, "FCEM MIN:", fcem_min, "FCEM MED:", fcem_med)
@@ -56,8 +62,10 @@ def plot_results(n_samples, horizon, save=True):
 #horizon = 15
 #n_samples = 5
 #horizon = 50
-n_samples = [3, 5, 10, 20, 30]
-horizon = [5, 10, 15, 30, 50]
+#n_samples = [3, 5, 10, 20, 30]
+#horizon = [5, 10, 15, 30, 50]
+n_samples = [3, 5, 10, 30, 100]
+horizon = [5, 10, 15, 30]
 #algs = ["fcem"]
 #n_samples = [3]
 #horizon = [5]

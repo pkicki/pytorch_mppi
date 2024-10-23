@@ -23,6 +23,11 @@ class RolloutDataset:
         self.input_data = [dataset.tensors[0]]
         self.output_data = [dataset.tensors[1]]
 
+    def load_data_append(self, filename):
+        dataset = torch.load(filename)
+        self.input_data.append(dataset.tensors[0])
+        self.output_data.append(dataset.tensors[1])
+
     def __call__(self):
         input_data = torch.concat(self.input_data, dim=0)
         output_data = torch.concat(self.output_data, dim=0)
@@ -30,11 +35,14 @@ class RolloutDataset:
     
 
 
-class NeuralModel:
-    def __init__(self, mujoco_model, state_dim, action_dim, device, dtype):
+class NeuralModel(torch.nn.Module):
+    def __init__(self, mujoco_model, state_dim, action_dim, device, dtype, dt=1e-2) -> None:
+        super(NeuralModel, self).__init__()
         self.mujoco_model = mujoco_model
         self.state_dim = state_dim
         self.action_dim = action_dim
+
+        self.dt = dt 
 
         self.nn = torch.nn.Sequential(
             torch.nn.Linear(state_dim + action_dim, 32),
@@ -52,14 +60,22 @@ class NeuralModel:
     def dynamics(self, state, perturbed_action):
         state = state[..., :self.state_dim]
         #t0 = perf_counter()
-        d_state = 0.1 * self.nn(torch.concat([state, perturbed_action], dim=-1))
-        next_state = state + d_state
+        #d_state = self.nn(torch.concat([state, perturbed_action], dim=-1))
+        #d_state = self.__call__(torch.concat([state, perturbed_action], dim=-1))
+        #next_state = state + d_state
+        next_state = self.predict(torch.concat([state, perturbed_action], dim=-1))
         #t1 = perf_counter()
         #print(t1 - t0)
         return next_state
 
     def running_cost(self, state, action):
         return self.mujoco_model.running_cost(state, action)
+    
+    def __call__(self, input_data):
+        return self.nn(input_data)
+
+    def predict(self, input_data):
+        return self.__call__(input_data) * self.dt + input_data[..., :self.state_dim]
 
     def train(self, dataset):
         loader = DataLoader(dataset, batch_size=4)

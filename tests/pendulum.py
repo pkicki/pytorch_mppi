@@ -1,10 +1,10 @@
-import gym
+import gymnasium as gym
 import numpy as np
 import torch
 import logging
 import math
 from pytorch_mppi import mppi
-from gym import logger as gym_log
+from gymnasium import logger as gym_log
 
 gym_log.set_level(gym_log.INFO)
 logger = logging.getLogger(__name__)
@@ -15,7 +15,8 @@ logging.basicConfig(level=logging.DEBUG,
 if __name__ == "__main__":
     ENV_NAME = "Pendulum-v1"
     TIMESTEPS = 15  # T
-    N_SAMPLES = 100  # K
+    #N_SAMPLES = 100  # K
+    N_SAMPLES = 3  # K
     ACTION_LOW = -2.0
     ACTION_HIGH = 2.0
 
@@ -23,6 +24,7 @@ if __name__ == "__main__":
     dtype = torch.double
 
     noise_sigma = torch.tensor(10, device=d, dtype=dtype)
+    #noise_sigma = torch.tensor(15, device=d, dtype=dtype)
     # noise_sigma = torch.tensor([[10, 0], [0, 10]], device=d, dtype=dtype)
     lambda_ = 1.
 
@@ -65,15 +67,20 @@ if __name__ == "__main__":
 
 
     downward_start = True
-    env = gym.make(ENV_NAME, render_mode="human")
+    #env = gym.make(ENV_NAME, render_mode="human")
+    env = gym.make(ENV_NAME, render_mode=None)
 
     env.reset()
     if downward_start:
         env.state = env.unwrapped.state = [np.pi, 1]
 
+    dt = env.unwrapped.dt
     nx = 2
     mppi_gym = mppi.MPPI(dynamics, running_cost, nx, noise_sigma, num_samples=N_SAMPLES, horizon=TIMESTEPS,
                          lambda_=lambda_, u_min=torch.tensor(ACTION_LOW, device=d),
-                         u_max=torch.tensor(ACTION_HIGH, device=d), device=d)
-    total_reward = mppi.run_mppi(mppi_gym, env, train)
-    logger.info("Total reward %f", total_reward)
+                         u_max=torch.tensor(ACTION_HIGH, device=d), device=d,
+                         noise_beta=1)
+                         #noise_cutoff_freq=2, sampling_freq=1./dt)
+                         #noise_cutoff_freq=None, sampling_freq=1./dt)
+    total_reward = mppi.run_mppi(mppi_gym, env, train, iter=100)
+    logger.info("Total reward %f", total_reward[0])

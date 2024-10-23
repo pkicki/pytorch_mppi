@@ -640,15 +640,21 @@ def run_mppi(mppi, env, retrain_dynamics, retrain_after_iter=50, iter=1000, rend
     total_reward = 0
     #actions = []
     for i in range(iter):
+        #print("Time step", i)
         #state = env.unwrapped.state.copy()
         state = env.get_state()
         command_start = time.perf_counter()
         action = mppi.command(state)
         elapsed = time.perf_counter() - command_start
+        t0 = time.perf_counter()
+        #print("command coputation time:", elapsed)
         res = env.step(action.cpu().numpy())
         #print(env.unwrapped.is_healthy)
         #if not env.unwrapped.is_healthy:
         #    a = 0
+        terminated = res[2]
+        if terminated:
+            a = 0
         s, r = res[0], res[1]
         total_reward += r
         logger.debug("action taken: %.4f cost received: %.4f time taken: %.5fs", action, -r, elapsed)
@@ -663,6 +669,8 @@ def run_mppi(mppi, env, retrain_dynamics, retrain_after_iter=50, iter=1000, rend
         dataset[di, :mppi.nx] = torch.tensor(state, dtype=mppi.U.dtype)
         dataset[di, mppi.nx:] = action
         #actions.append(action)
+        t1 = time.perf_counter()
+        #print("Simulation time step:", t1 - t0)
     #import numpy as np
     #actions = np.array([a.cpu().numpy() for a in actions])
     #random_actions = np.random.randn(*actions.shape)
