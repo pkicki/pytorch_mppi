@@ -12,6 +12,7 @@ import numpy as np
 
 from pytorch_mppi.noises.colored import ColoredMultivariateNormal
 from pytorch_mppi.noises.filtered import FilteredMultivariateNormal
+from pytorch_mppi.noises.interpolated import InterpolatedMultivariateNormal
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,7 @@ class MPPI():
                  noise_abs_cost=False,
                  noise_beta=None,
                  noise_cutoff_freq=None,
+                 noise_interpolate_nodes=None,
                  sampling_freq=None):
         """
         :param dynamics: function(state, action) -> next_state (K x nx) taking in batch state (K x nx) and action (K x nu)
@@ -97,7 +99,7 @@ class MPPI():
         self.d = device
         self.dtype = noise_sigma.dtype
         self.K = num_samples  # N_SAMPLES
-        self.T = horizon  # TIMESTEPS
+        self.T = horizon if noise_interpolate_nodes is None else noise_interpolate_nodes  # TIMESTEPS
 
         # dimensions of state and control
         self.nx = nx
@@ -143,6 +145,10 @@ class MPPI():
         elif noise_cutoff_freq is not None:
             assert sampling_freq is not None
             self.noise_dist = FilteredMultivariateNormal(self.noise_mu, sampling_freq, noise_cutoff_freq, covariance_matrix=self.noise_sigma)
+        elif noise_interpolate_nodes is not None:
+            assert noise_interpolate_nodes > 1 # TODO check what is the minimum number of nodes
+            assert noise_interpolate_nodes < horizon
+            self.noise_dist = InterpolatedMultivariateNormal(self.noise_mu, horizon, covariance_matrix=self.noise_sigma)
 
         # T x nu control sequence
         self.U = U_init

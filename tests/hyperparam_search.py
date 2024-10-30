@@ -25,15 +25,17 @@ def experiment(
         #x = trial.suggest_float('x', -10, 10)
         #noise_sigma = trial.suggest_float('noise_sigma', 0.1, 10.)
         noise_sigma = trial.suggest_float('noise_sigma', 0.1, 20.)
+        noise_beta = None
+        noise_cutoff_freq = None
+        noise_interpolate_nodes = None
         if alg == "icem":
             noise_beta = trial.suggest_float('noise_beta', 0.1, 10.)
-            noise_cutoff_freq = None
         elif alg == "fcem":
-            noise_beta = None
             noise_cutoff_freq = trial.suggest_float('noise_cutoff_freq', 0.1, 10.)
         elif alg == "mppi":
-            noise_beta = None
-            noise_cutoff_freq = None
+            pass
+        elif alg == "cubic_mppi":
+            noise_interpolate_nodes = trial.suggest_int('noise_interpolate_nodes', 2, horizon - 1)
         else:
             raise ValueError("Unknown algorithm")
         mean_reward = mppi_experiment(env_name=env_name,
@@ -45,6 +47,7 @@ def experiment(
                                       noise_sigma=noise_sigma,
                                       noise_beta=noise_beta,
                                       noise_cutoff_freq=noise_cutoff_freq,
+                                      noise_interpolate_nodes=noise_interpolate_nodes,
                                       render=False,
                                       seed=seed,
                                       results_dir="./results")
@@ -52,10 +55,15 @@ def experiment(
         return mean_reward
 
     #db_name = "hyperparameter_search.db"
-    db_name = "test.db"
-    storage_name = f"sqlite:///{db_name}"
+    #db_name = "test.db"
+    #storage_name = f"sqlite:///{db_name}"
+    storage = optuna.storages.JournalStorage(
+        optuna.storages.journal.JournalFileBackend(f"./hyperparam_search_{env_name}_local.log")
+        #optuna.storages.journal.JournalFileBackend(f"./test.log")
+    )
     study = optuna.create_study(study_name=f"{env_name}_h{horizon}_ns{n_samples}_{alg}",
-                                storage=storage_name, load_if_exists=True,
+                                storage=storage, load_if_exists=True,
+                                #storage=storage_name, load_if_exists=True,
                                 direction="maximize")
     study.optimize(objective, n_trials=10)
     print(study.best_params)
