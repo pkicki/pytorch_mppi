@@ -28,14 +28,19 @@ def experiment(
         noise_beta = None
         noise_cutoff_freq = None
         noise_interpolate_nodes = None
+        interpolation_type = None
         if alg == "icem":
             noise_beta = trial.suggest_float('noise_beta', 0.1, 10.)
         elif alg == "fcem":
             noise_cutoff_freq = trial.suggest_float('noise_cutoff_freq', 0.1, 10.)
         elif alg == "mppi":
             pass
-        elif alg == "cubic_mppi":
+        elif alg == "cubic_noise":
             noise_interpolate_nodes = trial.suggest_int('noise_interpolate_nodes', 2, horizon - 1)
+            interpolation_type = "cubic_noise"
+        elif alg == "cubic_actions":
+            noise_interpolate_nodes = trial.suggest_int('noise_interpolate_nodes', 2, horizon - 1)
+            interpolation_type = "cubic_actions"
         else:
             raise ValueError("Unknown algorithm")
         mean_reward = mppi_experiment(env_name=env_name,
@@ -48,6 +53,7 @@ def experiment(
                                       noise_beta=noise_beta,
                                       noise_cutoff_freq=noise_cutoff_freq,
                                       noise_interpolate_nodes=noise_interpolate_nodes,
+                                      interpolation_type=interpolation_type,
                                       render=False,
                                       seed=seed,
                                       results_dir="./results")

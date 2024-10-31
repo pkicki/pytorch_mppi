@@ -9,6 +9,8 @@ from arm_pytorch_utilities import handle_batch_input
 from functorch import vmap
 
 import numpy as np
+from torchcubicspline import(natural_cubic_spline_coeffs, 
+                            NaturalCubicSpline)
 
 from pytorch_mppi.noises.colored import ColoredMultivariateNormal
 from pytorch_mppi.noises.filtered import FilteredMultivariateNormal
@@ -70,6 +72,7 @@ class MPPI():
                  noise_beta=None,
                  noise_cutoff_freq=None,
                  noise_interpolate_nodes=None,
+                 interpolation_type=None,
                  sampling_freq=None):
         """
         :param dynamics: function(state, action) -> next_state (K x nx) taking in batch state (K x nx) and action (K x nu)
@@ -95,11 +98,14 @@ class MPPI():
         :param specific_action_sampler: Function to explicitly sample actions to use instead of sampling from noise from
             nominal trajectory, may output a number of action trajectories fewer than horizon
         :param noise_abs_cost: Whether to use the absolute value of the action noise to avoid bias when all states have the same cost
-        """
+        """ 
+        assert noise_interpolate_nodes is None or interpolation_type in ['cubic_actions', 'cubic_noise']
         self.d = device
         self.dtype = noise_sigma.dtype
         self.K = num_samples  # N_SAMPLES
         self.T = horizon if noise_interpolate_nodes is None else noise_interpolate_nodes  # TIMESTEPS
+        self.horizon = horizon
+        self.interpolation_type = interpolation_type
 
         # dimensions of state and control
         self.nx = nx
@@ -145,7 +151,7 @@ class MPPI():
         elif noise_cutoff_freq is not None:
             assert sampling_freq is not None
             self.noise_dist = FilteredMultivariateNormal(self.noise_mu, sampling_freq, noise_cutoff_freq, covariance_matrix=self.noise_sigma)
-        elif noise_interpolate_nodes is not None:
+        elif noise_interpolate_nodes is not None and self.interpolation_type == "cubic_noise":
             assert noise_interpolate_nodes > 1 # TODO check what is the minimum number of nodes
             assert noise_interpolate_nodes < horizon
             self.noise_dist = InterpolatedMultivariateNormal(self.noise_mu, horizon, covariance_matrix=self.noise_sigma)
@@ -279,7 +285,19 @@ class MPPI():
 
         states = []
         actions = []
-        for t in range(T):
+
+        if T < self.horizon:
+            if self.interpolation_type == "cubic_actions":
+                t = torch.linspace(0, 1, perturbed_actions.shape[-2])
+                coeffs = natural_cubic_spline_coeffs(t, perturbed_actions)
+                spline = NaturalCubicSpline(coeffs)
+                interpolation_points = torch.linspace(0, 1, self.horizon)
+                perturbed_actions = spline.evaluate(interpolation_points)
+            else:
+                ValueError(f"Interpolation type {self.interpolation_type} not supported")
+
+
+        for t in range(self.horizon):
             state_ = copy.deepcopy(state)
             times = []
             times.append(time.perf_counter())
@@ -641,7 +659,7 @@ class KMPPI(MPPI):
         return action
 
 
-def run_mppi(mppi, env, retrain_dynamics, retrain_after_iter=50, iter=1000, render=True):
+def run_mppi(mppi, env, retrain_dynamics, retrain_after_iter=50, iter=1000, shift_nominal_trajectory=True, render=True):
     dataset = torch.zeros((retrain_after_iter, mppi.nx + mppi.nu), dtype=mppi.U.dtype, device=mppi.d)
     total_reward = 0
     #actions = []
@@ -650,7 +668,7 @@ def run_mppi(mppi, env, retrain_dynamics, retrain_after_iter=50, iter=1000, rend
         #state = env.unwrapped.state.copy()
         state = env.get_state()
         command_start = time.perf_counter()
-        action = mppi.command(state)
+        action = mppi.command(state, shift_nominal_trajectory=shift_nominal_trajectory)
         elapsed = time.perf_counter() - command_start
         t0 = time.perf_counter()
         #print("command coputation time:", elapsed)

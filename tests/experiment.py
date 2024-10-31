@@ -61,8 +61,11 @@ def experiment(env_name: str = "humanoid",
                noise_beta: float = 2.0,
                #noise_cutoff_freq: float = 5.0,
                #noise_cutoff_freq: float = 4.4,
-               noise_interpolate_nodes: int = 2,
-               #noise_interpolate_nodes: int = None,
+               #noise_interpolate_nodes: int = 5,
+               noise_interpolate_nodes: int = None,
+               interpolation_type: str = None,
+               #interpolation_type: str = "cubic_actions",
+               #interpolation_type: str = "cubic_noise",
                #render: bool = False,
                render: bool = True,
                results_dir: str = "./results",
@@ -108,9 +111,12 @@ def experiment(env_name: str = "humanoid",
     action_lb = torch.tensor(model.action_low, device=d, dtype=dtype) 
     action_ub = torch.tensor(model.action_high, device=d, dtype=dtype)
     #nx = env.observation_space.shape[0]
-    mppi_gym = mppi.MPPI(model.dynamics, model.dynamics, model.running_cost, nx, noise_sigma, num_samples=n_samples, horizon=horizon,
+    mppi_gym = mppi.MPPI(model.dynamics, model.dynamics, model.running_cost, nx,
+                         noise_sigma, num_samples=n_samples, horizon=horizon,
                         lambda_=lambda_, u_min=action_lb, u_max=action_ub, device=d,
-                        noise_beta=noise_beta, noise_cutoff_freq=noise_cutoff_freq, sampling_freq=1./dt)
+                        noise_beta=noise_beta, noise_cutoff_freq=noise_cutoff_freq,
+                        noise_interpolate_nodes=noise_interpolate_nodes,
+                        interpolation_type=interpolation_type, sampling_freq=1./dt)
 
     rewards = []
     trajectories = []
@@ -122,7 +128,9 @@ def experiment(env_name: str = "humanoid",
         if env_name == "acrobot" and downward_start:
             env.unwrapped.physics.named.data.qpos[['shoulder', 'elbow']] = [np.pi, 0.]
             env.unwrapped.physics.named.data.qvel[['shoulder', 'elbow']] = np.zeros(2)
-        total_reward, history = mppi.run_mppi(mppi_gym, env, model.train, iter=n_steps, retrain_after_iter=n_steps, render=render)
+        total_reward, history = mppi.run_mppi(mppi_gym, env, model.train, iter=n_steps,
+                                              shift_nominal_trajectory=(interpolation_type != "cubic_actions"),
+                                              retrain_after_iter=n_steps, render=render)
         print(f"Episode {i} Total reward", total_reward)
         states = history[..., :state_dim]
         actions = history[..., -action_dim:]
