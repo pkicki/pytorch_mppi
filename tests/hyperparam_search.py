@@ -7,13 +7,13 @@ from experiment_launcher import single_experiment, run_experiment
 def experiment(
     #env_name: str = "half_cheetah",
     #env_name: str = "walker",
-    env_name: str = "pendulum",
-    #env_name: str = "hopper",
+    #env_name: str = "pendulum",
+    env_name: str = "hopper",
     n_episodes: int = 100,
-    n_steps: int = 100,
-    horizon: int = 50,
-    n_samples: int = 10,
-    alg: str = "icem",
+    n_steps: int = 200,
+    horizon: int = 5,
+    n_samples: int = 100,
+    alg: str = "fcem",
     #alg: str = "mppi",
     simulator: str = "gym",
     #simulator: str = "brax",
@@ -60,16 +60,12 @@ def experiment(
 
         return mean_reward
 
-    #db_name = "hyperparameter_search.db"
-    #db_name = "test.db"
-    #storage_name = f"sqlite:///{db_name}"
     storage = optuna.storages.JournalStorage(
-        optuna.storages.journal.JournalFileBackend(f"./hyperparam_search_{env_name}_local.log")
+        optuna.storages.journal.JournalFileBackend(f"./newlp_hyperparam_search_{env_name}_local.log")
         #optuna.storages.journal.JournalFileBackend(f"./test.log")
     )
     study = optuna.create_study(study_name=f"{env_name}_h{horizon}_ns{n_samples}_{alg}",
                                 storage=storage, load_if_exists=True,
-                                #storage=storage_name, load_if_exists=True,
                                 direction="maximize")
     study.optimize(objective, n_trials=10)
     print(study.best_params)

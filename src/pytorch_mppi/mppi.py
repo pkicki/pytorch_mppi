@@ -12,6 +12,7 @@ import numpy as np
 from torchcubicspline import(natural_cubic_spline_coeffs, 
                             NaturalCubicSpline)
 
+from pytorch_mppi.filters.low_pass import LPFilter
 from pytorch_mppi.noises.colored import ColoredMultivariateNormal
 from pytorch_mppi.noises.filtered import FilteredMultivariateNormal
 from pytorch_mppi.noises.interpolated import InterpolatedMultivariateNormal
@@ -146,11 +147,14 @@ class MPPI():
         self.noise_sigma_inv = torch.inverse(self.noise_sigma)
         self.noise_dist = MultivariateNormal(self.noise_mu, covariance_matrix=self.noise_sigma)
         self.sampling_freq = sampling_freq
+        # define low pass filter if cutoff frequency is specified
+        self.lp_filter = LPFilter(noise_cutoff_freq, sampling_freq) if noise_cutoff_freq is not None else None
+        #self.lp_filter = None
         if noise_beta is not None:
             self.noise_dist = ColoredMultivariateNormal(self.noise_mu, noise_beta, covariance_matrix=self.noise_sigma)
-        elif noise_cutoff_freq is not None:
-            assert sampling_freq is not None
-            self.noise_dist = FilteredMultivariateNormal(self.noise_mu, sampling_freq, noise_cutoff_freq, covariance_matrix=self.noise_sigma)
+        #elif noise_cutoff_freq is not None:
+        #    assert sampling_freq is not None
+        #    self.noise_dist = FilteredMultivariateNormal(self.noise_mu, sampling_freq, noise_cutoff_freq, covariance_matrix=self.noise_sigma)
         elif noise_interpolate_nodes is not None and self.interpolation_type == "cubic_noise":
             assert noise_interpolate_nodes > 1 # TODO check what is the minimum number of nodes
             assert noise_interpolate_nodes < horizon
@@ -162,6 +166,8 @@ class MPPI():
 
         if self.U is None:
             self.U = self.noise_dist.sample((self.T,))
+
+        self.action_history = torch.zeros((self.T, self.nu), dtype=self.dtype, device=self.d)
 
         self.step_dependency = step_dependent_dynamics
         self.F = dynamics
@@ -252,6 +258,7 @@ class MPPI():
         # reduce dimensionality if we only need the first command
         if self.u_per_command == 1:
             action = action[0]
+        self.action_history = torch.cat((action[None], self.action_history[:-1]), axis=0)
         return action
 
     def change_horizon(self, horizon):
@@ -344,6 +351,8 @@ class MPPI():
         noise = self.noise_dist.rsample((self.K, self.T))
         # broadcast own control to noise over samples; now it's K x T x nu
         perturbed_action = self.U + noise
+        if self.lp_filter is not None:
+            perturbed_action = self.lp_filter.apply(perturbed_action, history=self.action_history)
         perturbed_action = self._sample_specific_actions(perturbed_action)
         # naively bound control
         self.perturbed_action = self._bound_action(perturbed_action)

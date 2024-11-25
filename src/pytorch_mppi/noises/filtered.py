@@ -42,5 +42,6 @@ class FilteredMultivariateNormal(MultivariateNormal):
     def rsample(self, sample_shape=torch.Size()):
         shape = self._extended_shape(sample_shape)
         eps = _standard_normal(shape, dtype=self.loc.dtype, device=self.loc.device)
-        eps = self.lp_filter(eps)
-        return self.loc + _batch_mv(self._unbroadcasted_scale_tril, eps)
+        eps_filtered = self.lp_filter(eps)
+        eps_filtered_scaled = _batch_mv(self._unbroadcasted_scale_tril, eps_filtered)
+        return self.loc + eps_filtered_scaled
