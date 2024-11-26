@@ -1,21 +1,24 @@
 import torch
+import numpy as np
 from time import perf_counter
 
 
 class MuJoCo:
     def dynamics(self, state, perturbed_action):
         state_np = state.detach().numpy()
+        rewards = np.zeros(state_np.shape[0])
         perturbed_action_np = perturbed_action.detach().numpy()
         nq = self.env.unwrapped.model.nq
         nv = self.env.unwrapped.model.nv
         #t0 = perf_counter()
         for i in range(state_np.shape[0]):
             self.env.unwrapped.set_state(state_np[i, :nq], state_np[i, nq:nq+nv])
-            state_np[i, :], _, _, _, _ = self.env.step(perturbed_action_np[i])
+            state_np[i, :], rewards[i], _, _, _ = self.env.step(perturbed_action_np[i])
         #t1 = perf_counter()
         #print(t1 - t0)
         state = torch.tensor(state_np, device=state.device, dtype=state.dtype)
-        return state, None
+        rewards = torch.tensor(rewards, device=state.device, dtype=state.dtype)
+        return state, -rewards
 
     @property
     def state_dim(self):

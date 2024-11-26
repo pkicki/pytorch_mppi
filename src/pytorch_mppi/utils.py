@@ -195,7 +195,7 @@ def load_env_and_model(env_name, simulator, n_envs, render=False):
             raise NotImplementedError("HumanoidStandup is not implemented in Brax")
     elif env_name == "hopper":
         if simulator == "gym":
-            env = gym.make("Hopper-v5", render_mode="human" if render else None,
+            env = gym.make("Hopper-v5", frame_skip=8, render_mode="human" if render else None,
                            exclude_current_positions_from_observation=False,
                            terminate_when_unhealthy=False)
             model = Hopper(deepcopy(env))
