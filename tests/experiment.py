@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from dynamics_models.neural_model import NeuralModel, RolloutDataset
 from pytorch_mppi import mppi
+from pytorch_mppi import my_mppi
 from gymnasium import logger as gym_log
 import wandb
 

@@ -692,7 +692,7 @@ def run_mppi(mppi, env, retrain_dynamics, retrain_after_iter=50, iter=1000, shif
         total_reward += r
         logger.debug("action taken: %.4f cost received: %.4f time taken: %.5fs", action, -r, elapsed)
         if render:
-            env.render()
+            env.render(trajectories=mppi.states[:, :, :2], costs=mppi.cost_total)
 
         di = i % retrain_after_iter
         if di == 0 and i > 0:
