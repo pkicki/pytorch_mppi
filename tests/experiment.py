@@ -29,10 +29,10 @@ def no_train(new_data):
 #def experiment(env_name: str = "half_cheetah",
 #def experiment(env_name: str = "hopper",
 #def experiment(env_name: str = "swimmer",
-def experiment(env_name: str = "humanoid",
+#def experiment(env_name: str = "humanoid",
 #def experiment(env_name: str = "humanoid_standup",
-               simulator: str = "brax",
-               #simulator: str = "gym",
+#def experiment(env_name: str = "quadrotor",
+def experiment(env_name: str = "car",
                neural_model: bool = False,
                dataset_path: str = None,
                #dataset_path: str = "humanoid_fcem_nc7_sig7_h30_ns100.pt",
@@ -111,12 +111,17 @@ def experiment(env_name: str = "humanoid",
     action_lb = torch.tensor(model.action_low, device=d, dtype=dtype) 
     action_ub = torch.tensor(model.action_high, device=d, dtype=dtype)
     #nx = env.observation_space.shape[0]
-    mppi_gym = mppi.MPPI(model.dynamics, model.dynamics, model.running_cost, nx,
-                         noise_sigma, num_samples=n_samples, horizon=horizon,
-                        lambda_=lambda_, u_min=action_lb, u_max=action_ub, device=d,
-                        noise_beta=noise_beta, noise_cutoff_freq=noise_cutoff_freq,
-                        noise_interpolate_nodes=noise_interpolate_nodes,
-                        interpolation_type=interpolation_type, sampling_freq=1./dt)
+    #mppi_gym = mppi.MPPI(model.dynamics, model.dynamics, model.running_cost, nx,
+    #                     noise_sigma, num_samples=n_samples, horizon=horizon,
+    #                     lambda_=lambda_, u_min=action_lb, u_max=action_ub, device=d,
+    #                     noise_beta=noise_beta, noise_cutoff_freq=noise_cutoff_freq,
+    #                     noise_interpolate_nodes=noise_interpolate_nodes,
+    #                     interpolation_type=interpolation_type, sampling_freq=1./dt)
+
+    mppi_gym = my_mppi.MPPI(dynamics=model.dynamics, horizon=horizon, num_samples=n_samples,
+                            control_dim=action_dim, state_dim=state_dim, lambda_=lambda_,
+                            noise_beta=noise_beta, noise_cutoff_freq=noise_cutoff_freq,
+                            sampling_freq=1./dt)
 
     rewards = []
     trajectories = []
@@ -128,9 +133,10 @@ def experiment(env_name: str = "humanoid",
         if env_name == "acrobot" and downward_start:
             env.unwrapped.physics.named.data.qpos[['shoulder', 'elbow']] = [np.pi, 0.]
             env.unwrapped.physics.named.data.qvel[['shoulder', 'elbow']] = np.zeros(2)
-        total_reward, history = mppi.run_mppi(mppi_gym, env, model.train, iter=n_steps,
-                                              shift_nominal_trajectory=(interpolation_type != "cubic_actions"),
-                                              retrain_after_iter=n_steps, render=render)
+        #total_reward, history = mppi.run_mppi(mppi_gym, env, model.train, iter=n_steps,
+        #                                      shift_nominal_trajectory=(interpolation_type != "cubic_actions"),
+        #                                      retrain_after_iter=n_steps, render=render)
+        total_reward, history = my_mppi.run_mppi(mppi_gym, env, iter=n_steps, render=render)
         print(f"Episode {i} Total reward", total_reward)
         states = history[..., :state_dim]
         actions = history[..., -action_dim:]

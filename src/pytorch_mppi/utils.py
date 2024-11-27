@@ -7,6 +7,7 @@ from brax.io.image import render
 from brax.io import html
 from gymnasium.envs.mujoco.mujoco_rendering import MujocoRenderer
 import mujoco
+from car_env.envs.vec_env import SingleTrackVecEnv
 
 from dynamics_models.acrobot import Acrobot
 from dynamics_models.go1 import Go1
@@ -15,6 +16,7 @@ from dynamics_models.hopper import Hopper
 from dynamics_models.humanoid import Humanoid, HumanoidBrax
 from dynamics_models.humanoid_standup import HumanoidStandup
 from dynamics_models.pendulum import Pendulum
+from dynamics_models.single_track import SingleTrack
 from dynamics_models.swimmer import Swimmer
 from dynamics_models.walker_2d import Walker2D
 
@@ -51,14 +53,21 @@ class EnvWrapper:
             info = self.state[-1].info
             terminated = self.state[-1].info['truncation']
             return next_state, reward, terminated, info
+        elif "SingleTrackVecEnv" in str(type(self.env)):
+            s, r, t, i =  self.env.step(action[None].astype(np.float32))
+            return s[0], r[0], t[0], i[0]
+        else:
+            return self.env.step(action)
 
     def reset(self):
         if "gym" in str(type(self.env)):
             self.env.reset()
         elif "brax" in str(type(self.env)):
             self.state = [self.env.reset(jax.random.PRNGKey(0))]
+        else:
+            self.env.reset()
 
-    def render(self):
+    def render(self, trajectories=None, costs=None):
         if not self.render:
             return None
         if "gym" in str(type(self.env)):
@@ -69,6 +78,10 @@ class EnvWrapper:
             #self.mj_data.qvel[:] = self.state[-1].pipeline_state.qd[:self.env.sys.nv]
             #self.mujoco_renderer.render("human")
             #render(self.env.sys, [self.state.pipeline_state])
+        elif "SingleTrackVecEnv" in str(type(self.env)):
+            return self.env.render(trajectories=trajectories, costs=costs)
+        else:
+            return self.env.render()
 
     def save_rendering(self, path):
         if "brax" in str(type(self.env)):
@@ -89,6 +102,8 @@ class EnvWrapper:
             return self.env.unwrapped._get_obs().copy()
         elif "brax" in str(type(self.env)):
             return self._get_obs().copy()
+        elif "SingleTrackVecEnv" in str(type(self.env)):
+            return self.env.unwrapped.simulator.get_state()[0]
         return self.env.get_state()
 
 def load_env_and_model(env_name, simulator, n_envs, render=False):
@@ -208,6 +223,11 @@ def load_env_and_model(env_name, simulator, n_envs, render=False):
             model = Swimmer(deepcopy(env))
         elif simulator == "brax":
             raise NotImplementedError("Swimmer is not implemented in Brax")
+    elif env_name == "car":
+        dt = 0.05
+        env = SingleTrackVecEnv(num_envs=1, reset_if_off_track=False, two_way_tracks=False, compile=False, tracks=["oval"], dt=dt)
+        model = SingleTrack(SingleTrackVecEnv(num_envs=n_envs, reset_if_off_track=False, two_way_tracks=False, compile=True, tracks=["oval"], dt=dt))
+        #model = None
     else:
         raise ValueError("Unknown environment")
     return EnvWrapper(env, render), model
