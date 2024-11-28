@@ -77,7 +77,8 @@ def experiment(env_name: str = "car",
     gym_log.set_level(gym_log.ERROR)
 
     d = device
-    dtype = torch.double
+    #dtype = torch.double
+    dtype = torch.float
 
     mode = "online" if wandb_logging else "disabled"
     wandb.init(project="mppi", entity="kicai", mode=mode)
