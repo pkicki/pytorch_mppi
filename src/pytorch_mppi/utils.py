@@ -225,8 +225,9 @@ def load_env_and_model(env_name, simulator, n_envs, render=False):
             raise NotImplementedError("Swimmer is not implemented in Brax")
     elif env_name == "car":
         dt = 0.05
-        env = SingleTrackVecEnv(num_envs=1, reset_if_off_track=False, two_way_tracks=False, compile=False, tracks=["oval"], dt=dt)
-        model = SingleTrack(SingleTrackVecEnv(num_envs=n_envs, reset_if_off_track=False, two_way_tracks=False, compile=True, tracks=["oval"], dt=dt))
+        track = "oval"
+        env = SingleTrackVecEnv(num_envs=1, reset_if_off_track=False, two_way_tracks=False, compile=False, tracks=[track], dt=dt)
+        model = SingleTrack(SingleTrackVecEnv(num_envs=n_envs, reset_if_off_track=False, two_way_tracks=False, compile=True, tracks=[track], dt=dt))
         #model = None
     else:
         raise ValueError("Unknown environment")

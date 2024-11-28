@@ -5,9 +5,10 @@ from pytorch_mppi.noises.colored import ColoredMultivariateNormal
 from pytorch_mppi.noises.filtered import FilteredMultivariateNormal
 
 class MPPI:
-    def __init__(self, dynamics, horizon, num_samples, control_dim, state_dim, noise_sigma,
+    def __init__(self, env, horizon, num_samples, control_dim, state_dim, noise_sigma,
                  noise_beta=None, noise_cutoff_freq=None, sampling_freq=None, lambda_=1.0, device='cpu'):
-        self.dynamics = dynamics  # System dynamics function
+        self.env = env  # Environment
+        self.dynamics = env.dynamics  # System dynamics function
         self.horizon = horizon  # Prediction horizon
         self.num_samples = num_samples  # Number of sampled control sequences
         self.lambda_ = lambda_  # Temperature parameter
@@ -31,7 +32,10 @@ class MPPI:
         #    assert noise_interpolate_nodes < horizon
         #    self.noise_dist = InterpolatedMultivariateNormal(self.noise_mu, horizon, covariance_matrix=self.noise_sigma)
 
-    def command(self, state):
+    def reset(self):
+        self.U = torch.zeros((self.horizon, self.control_dim), device=self.device)
+
+    def command(self, state, s=None):
         """
         Compute the optimal control sequence using MPPI.
         """
@@ -40,12 +44,18 @@ class MPPI:
         
         # Generate sampled control sequences
         control_samples = self.U.unsqueeze(0) + perturbations  # Shape: (num_samples, horizon, control_dim)
+        control_samples = torch.clamp(control_samples, torch.tensor(self.env.action_low[None, None]),
+                                      torch.tensor(self.env.action_high[None, None]))
+        clamped_perturbations = control_samples - self.U.unsqueeze(0)
         
         # Simulate trajectories and compute costs
         self.costs = torch.zeros(self.num_samples, device=self.device)
         current_states = torch.tile(state[None], (self.num_samples, 1))
         self.states = torch.zeros((self.num_samples, self.horizon + 1, self.state_dim), device=self.device)
         self.states[:, 0] = current_states
+        # hotfix for setting s to good value
+        if s is not None:
+            self.env.env.unwrapped.simulator.set_s(s)
         for t in range(self.horizon):
             current_control = control_samples[:, t]
             next_states, cost = self.dynamics(current_states, current_control)
@@ -60,7 +70,8 @@ class MPPI:
         weights /= weights.sum()  # Normalize weights
         
         # Update control sequence
-        weighted_control_update = (weights.unsqueeze(1).unsqueeze(2) * perturbations).sum(dim=0)
+        #weighted_control_update = (weights.unsqueeze(1).unsqueeze(2) * perturbations).sum(dim=0)
+        weighted_control_update = (weights.unsqueeze(1).unsqueeze(2) * clamped_perturbations).sum(dim=0)
         self.U = self.U + weighted_control_update
 
         current_control = self.U[0]
@@ -71,10 +82,14 @@ class MPPI:
 def run_mppi(mppi, env, iter=1000, render=True):
     dataset = torch.zeros((iter, mppi.state_dim + mppi.control_dim), device=mppi.device)
     total_reward = 0
+    mppi.reset()
     for i in range(iter):
         #print("Time step", i)
         state = env.get_state()
-        action = mppi.command(state)
+        if hasattr(env.unwrapped.simulator, "last_s"):
+            action = mppi.command(state, s=env.unwrapped.simulator.last_s)
+        else:
+            action = mppi.command(state)
         res = env.step(action.cpu().numpy())
 
         s, r = res[0], res[1]
