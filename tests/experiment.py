@@ -121,8 +121,8 @@ def experiment(env_name: str = "car",
 
     mppi_gym = my_mppi.MPPI(dynamics=model.dynamics, horizon=horizon, num_samples=n_samples,
                             control_dim=action_dim, state_dim=state_dim, lambda_=lambda_,
-                            noise_beta=noise_beta, noise_cutoff_freq=noise_cutoff_freq,
-                            sampling_freq=1./dt)
+                            noise_sigma=noise_sigma, noise_beta=noise_beta,
+                            noise_cutoff_freq=noise_cutoff_freq, sampling_freq=1./dt)
 
     rewards = []
     trajectories = []

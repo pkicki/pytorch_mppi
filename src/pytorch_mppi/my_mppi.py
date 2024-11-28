@@ -5,7 +5,7 @@ from pytorch_mppi.noises.colored import ColoredMultivariateNormal
 from pytorch_mppi.noises.filtered import FilteredMultivariateNormal
 
 class MPPI:
-    def __init__(self, dynamics, horizon, num_samples, control_dim, state_dim,
+    def __init__(self, dynamics, horizon, num_samples, control_dim, state_dim, noise_sigma,
                  noise_beta=None, noise_cutoff_freq=None, sampling_freq=None, lambda_=1.0, device='cpu'):
         self.dynamics = dynamics  # System dynamics function
         self.horizon = horizon  # Prediction horizon
@@ -19,7 +19,7 @@ class MPPI:
         self.states = torch.zeros((self.num_samples, self.horizon + 1, self.state_dim), device=self.device)
 
         self.noise_mu = torch.zeros(self.control_dim)
-        self.noise_sigma = 0.05 * torch.eye(self.control_dim, device=self.device)
+        self.noise_sigma = noise_sigma
         self.noise_dist = MultivariateNormal(self.noise_mu, covariance_matrix=self.noise_sigma)
         if noise_beta is not None:
             self.noise_dist = ColoredMultivariateNormal(self.noise_mu, noise_beta, covariance_matrix=self.noise_sigma)
