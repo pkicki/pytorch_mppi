@@ -75,6 +75,8 @@ def experiment(env_name: str = "car",
                seed: int = 444,
                ) -> None:
     gym_log.set_level(gym_log.ERROR)
+    torch.manual_seed(seed)
+    np.random.seed(seed)
 
     d = device
     #dtype = torch.double
