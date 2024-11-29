@@ -8,12 +8,14 @@ def experiment(
     #env_name: str = "half_cheetah",
     #env_name: str = "walker",
     #env_name: str = "pendulum",
-    env_name: str = "hopper",
-    n_episodes: int = 100,
+    #env_name: str = "hopper",
+    env_name: str = "car",
+    n_episodes: int = 30,
     n_steps: int = 200,
-    horizon: int = 5,
+    horizon: int = 30,
     n_samples: int = 100,
-    alg: str = "fcem",
+    #alg: str = "fcem",
+    alg: str = "icem",
     #alg: str = "mppi",
     simulator: str = "gym",
     #simulator: str = "brax",
@@ -24,7 +26,7 @@ def experiment(
     def objective(trial):
         #x = trial.suggest_float('x', -10, 10)
         #noise_sigma = trial.suggest_float('noise_sigma', 0.1, 10.)
-        noise_sigma = trial.suggest_float('noise_sigma', 0.1, 20.)
+        noise_sigma = trial.suggest_float('noise_sigma', 0.1, 20., log=True)
         noise_beta = None
         noise_cutoff_freq = None
         noise_interpolate_nodes = None
@@ -32,7 +34,7 @@ def experiment(
         if alg == "icem":
             noise_beta = trial.suggest_float('noise_beta', 0.1, 10.)
         elif alg == "fcem":
-            noise_cutoff_freq = trial.suggest_float('noise_cutoff_freq', 0.1, 10.)
+            noise_cutoff_freq = trial.suggest_float('noise_cutoff_freq', 0.1, 10., log=True)
         elif alg == "mppi":
             pass
         elif alg == "cubic_noise":
@@ -61,7 +63,7 @@ def experiment(
         return mean_reward
 
     storage = optuna.storages.JournalStorage(
-        optuna.storages.journal.JournalFileBackend(f"./newlp_hyperparam_search_{env_name}_local.log")
+        optuna.storages.journal.JournalFileBackend(f"./hyperparam_search_{env_name}_icra2023_local.log")
         #optuna.storages.journal.JournalFileBackend(f"./test.log")
     )
     study = optuna.create_study(study_name=f"{env_name}_h{horizon}_ns{n_samples}_{alg}",
