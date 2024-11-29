@@ -34,6 +34,8 @@ def no_train(new_data):
 #def experiment(env_name: str = "humanoid_standup",
 #def experiment(env_name: str = "quadrotor",
 def experiment(env_name: str = "car",
+               #simulator: str = "brax",
+               simulator: str = "gym",
                neural_model: bool = False,
                dataset_path: str = None,
                #dataset_path: str = "humanoid_fcem_nc7_sig7_h30_ns100.pt",
