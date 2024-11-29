@@ -32,8 +32,11 @@ class MPPI:
         #    assert noise_interpolate_nodes < horizon
         #    self.noise_dist = InterpolatedMultivariateNormal(self.noise_mu, horizon, covariance_matrix=self.noise_sigma)
 
-    def reset(self):
-        self.U = torch.zeros((self.horizon, self.control_dim), device=self.device)
+    def reset(self, initial_controls=None):
+        if initial_controls is not None:
+            self.U = torch.tensor(initial_controls, device=self.device)
+        else:
+            self.U = torch.zeros((self.horizon, self.control_dim), device=self.device)
 
     def command(self, state, s=None):
         """
@@ -82,7 +85,7 @@ class MPPI:
 def run_mppi(mppi, env, iter=1000, render=True):
     dataset = torch.zeros((iter, mppi.state_dim + mppi.control_dim), device=mppi.device)
     total_reward = 0
-    mppi.reset()
+    mppi.reset(env.default_controls(mppi.horizon)[0])
     for i in range(iter):
         #print("Time step", i)
         state = env.get_state()
