@@ -7,6 +7,7 @@ from brax.io.image import render
 from brax.io import html
 from gymnasium.envs.mujoco.mujoco_rendering import MujocoRenderer
 import mujoco
+import torch
 from car_env.envs.vec_env import SingleTrackVecEnv
 
 from dynamics_models.acrobot import Acrobot
@@ -99,9 +100,9 @@ class EnvWrapper:
     
     def get_state(self):
         if "gym" in str(type(self.env)):
-            return self.env.unwrapped._get_obs().copy()
+            return torch.tensor(self.env.unwrapped._get_obs().copy())
         elif "brax" in str(type(self.env)):
-            return self._get_obs().copy()
+            return torch.tensor(self._get_obs().copy())
         elif "SingleTrackVecEnv" in str(type(self.env)):
             return self.env.unwrapped.simulator.get_state()[0]
         return self.env.get_state()
@@ -124,7 +125,7 @@ def load_env_and_model(env_name, simulator, n_envs, render=False):
     elif env_name == "go1":
         if simulator == "gym":
             env = gym.make(
-                'Ant-v5',
+                'Ant-v4',
                 xml_file='./mujoco_menagerie/unitree_go1/scene.xml',
                 forward_reward_weight=1,  # kept the same as the 'Ant' environment
                 ctrl_cost_weight=0.05,  # changed because of the stronger motors of `Go1`
@@ -144,13 +145,13 @@ def load_env_and_model(env_name, simulator, n_envs, render=False):
             raise NotImplementedError("Go1 is not implemented in Brax")
     elif env_name == "half_cheetah":
         if simulator == "gym":
-            env = gym.make("HalfCheetah-v5", render_mode="human" if render else None, exclude_current_positions_from_observation=False)
+            env = gym.make("HalfCheetah-v4", render_mode="human" if render else None, exclude_current_positions_from_observation=False)
             model = HalfCheetah(deepcopy(env))
         elif simulator == "brax":
             raise NotImplementedError("HalfCheetah is not implemented in Brax")
     elif env_name == "walker":
         if simulator == "gym":
-            env = gym.make("Walker2d-v5", render_mode="human" if render else None,
+            env = gym.make("Walker2d-v4", render_mode="human" if render else None,
                            exclude_current_positions_from_observation=False,
                            terminate_when_unhealthy=False)
             model = Walker2D(deepcopy(env))
@@ -158,7 +159,7 @@ def load_env_and_model(env_name, simulator, n_envs, render=False):
             raise NotImplementedError("Walker2d is not implemented in Brax")
     elif env_name == "humanoid":
         if simulator == "gym":
-            env = gym.make("Humanoid-v5", render_mode="human" if render else None,
+            env = gym.make("Humanoid-v4", render_mode="human" if render else None,
                            exclude_current_positions_from_observation=False,
                            terminate_when_unhealthy=False,
                            include_cinert_in_observation=False,
@@ -199,7 +200,7 @@ def load_env_and_model(env_name, simulator, n_envs, render=False):
         #noise_sigma = noise_sigma * torch.eye(model.env.action_space.shape[0], device=d, dtype=dtype)
     elif env_name == "humanoid_standup":
         if simulator == "gym":
-            env = gym.make("HumanoidStandup-v5", render_mode="human" if render else None,
+            env = gym.make("HumanoidStandup-v4", render_mode="human" if render else None,
                         exclude_current_positions_from_observation=False,
                         include_cinert_in_observation=False,
                         include_cvel_in_observation=False,
@@ -210,7 +211,8 @@ def load_env_and_model(env_name, simulator, n_envs, render=False):
             raise NotImplementedError("HumanoidStandup is not implemented in Brax")
     elif env_name == "hopper":
         if simulator == "gym":
-            env = gym.make("Hopper-v5", frame_skip=8, render_mode="human" if render else None,
+            #env = gym.make("Hopper-v4", frame_skip=8, render_mode="human" if render else None,
+            env = gym.make("Hopper-v4", render_mode="human" if render else None,
                            exclude_current_positions_from_observation=False,
                            terminate_when_unhealthy=False)
             model = Hopper(deepcopy(env))
@@ -218,7 +220,7 @@ def load_env_and_model(env_name, simulator, n_envs, render=False):
             raise NotImplementedError("Hopper is not implemented in Brax")
     elif env_name == "swimmer":
         if simulator == "gym":
-            env = gym.make("Swimmer-v5", render_mode="human" if render else None,
+            env = gym.make("Swimmer-v4", render_mode="human" if render else None,
                            exclude_current_positions_from_observation=False)
             model = Swimmer(deepcopy(env))
         elif simulator == "brax":

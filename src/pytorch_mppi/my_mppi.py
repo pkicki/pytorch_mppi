@@ -150,11 +150,14 @@ class MPPI:
 def run_mppi(mppi, env, iter=1000, render=True):
     dataset = torch.zeros((iter, mppi.state_dim + mppi.control_dim), device=mppi.device)
     total_reward = 0
-    mppi.reset(env.default_controls(mppi.horizon)[0])
+    if hasattr(env, "default_controls"):
+        mppi.reset(env.default_controls(mppi.horizon)[0])
+    else:
+        mppi.reset()
     for i in range(iter):
         #print("Time step", i)
         state = env.get_state()
-        if hasattr(env.unwrapped.simulator, "last_s"):
+        if hasattr(env.unwrapped, "simulator") and hasattr(env.unwrapped.simulator, "last_s"):
             action = mppi.command(state, s=env.unwrapped.simulator.last_s)
         else:
             action = mppi.command(state)
