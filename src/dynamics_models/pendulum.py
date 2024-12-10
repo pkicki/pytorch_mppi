@@ -8,8 +8,8 @@ def angle_normalize(x):
 
 
 class Pendulum:
-    action_low = np.array([-2.0])
-    action_high = np.array([2.0])
+    action_low = np.array([-2.0], dtype=np.float32)
+    action_high = np.array([2.0], dtype=np.float32)
     dt = 0.05
 
     def dynamics(self, state, perturbed_action):
