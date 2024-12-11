@@ -12,6 +12,7 @@ from car_env.envs.vec_env import SingleTrackVecEnv
 
 from dynamics_models.acrobot import Acrobot
 from dynamics_models.go1 import Go1
+from dynamics_models.gym_model import GymModel
 from dynamics_models.half_cheetah import HalfCheetah
 from dynamics_models.hopper import Hopper
 from dynamics_models.humanoid import Humanoid, HumanoidBrax
@@ -99,8 +100,11 @@ class EnvWrapper:
         return np.concatenate([self.state[-1].pipeline_state.q, self.state[-1].pipeline_state.qd], axis=-1)
     
     def get_state(self):
-        if "gym" in str(type(self.env)):
+        if "Pendulum" in str(type(self.env.unwrapped)):
             return torch.tensor(self.env.unwrapped._get_obs().copy())
+        elif "gym" in str(type(self.env)):
+            return torch.tensor(self.env.unwrapped.data.qpos.tolist() + self.env.unwrapped.data.qvel.tolist())
+            #return torch.tensor(self.env.unwrapped._get_obs().copy())
         elif "brax" in str(type(self.env)):
             return torch.tensor(self._get_obs().copy())
         elif "SingleTrackVecEnv" in str(type(self.env)):
@@ -122,6 +126,15 @@ def load_env_and_model(env_name, simulator, n_envs, render=False):
             return np.concat([self.physics.data.qpos, self.physics.data.qvel])
         #env.unwrapped._get_obs = get_obs
         setattr(type(env.unwrapped), "_get_obs", get_obs)
+    elif env_name == "ant":
+        env = gym.make(
+            'Ant-v5',
+            include_cfrc_ext_in_observation=False,
+            exclude_current_positions_from_observation=False,
+            terminate_when_unhealthy=False,
+            render_mode="human" if render else None,
+        )
+        model = GymModel(deepcopy(env))
     elif env_name == "go1":
         if simulator == "gym":
             env = gym.make(
