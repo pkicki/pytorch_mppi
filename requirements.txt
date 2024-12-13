@@ -1,3 +1,10 @@
 gymnasium==1.0.0
 torch==2.5.1
+torchaudio==2.5.1
 experiment_launcher
+colorednoise
+scipy
+matplotlib
+jax
+brax
+imageio
