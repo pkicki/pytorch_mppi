@@ -248,7 +248,7 @@ def load_env_and_model(env_name, simulator, n_envs, render=False):
                                 reward_type=reward_type, compile=False, tracks=[track], dt=dt)
         model = SingleTrack(SingleTrackVecEnv(num_envs=n_envs, reset_if_off_track=False,
                                               two_way_tracks=False, reward_type=reward_type,
-                                              compile=True, tracks=[track], dt=dt))
+                                              compile=compile, tracks=[track], dt=dt))
         #model = None
     else:
         raise ValueError("Unknown environment")

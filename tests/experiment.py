@@ -71,7 +71,7 @@ def experiment(env_name: str = "car",
     noise_sigma = torch.tensor(noise_sigma, device=d, dtype=dtype)
     lambda_ = lambda_
 
-    env, model = load_env_and_model(env_name, simulator, n_envs=n_samples, render=render)
+    env, model = load_env_and_model(env_name, simulator, n_envs=n_samples, render=render, compile=True)
 
     noise_sigma = noise_sigma * torch.eye(model.action_dim, device=d, dtype=dtype)
     state_dim = model.state_dim
