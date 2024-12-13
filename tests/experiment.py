@@ -61,17 +61,12 @@ def experiment(env_name: str = "car",
                wandb_logging: bool = False,
                seed: int = 444,
                ) -> None:
-    gym_log.set_level(gym_log.ERROR)
     torch.manual_seed(seed)
     np.random.seed(seed)
 
     d = device
     #dtype = torch.double
     dtype = torch.float
-
-    mode = "online" if wandb_logging else "disabled"
-    wandb.init(project="mppi", entity="kicai", mode=mode)
-    wandb.config.update(locals())
 
     noise_sigma = torch.tensor(noise_sigma, device=d, dtype=dtype)
     lambda_ = lambda_

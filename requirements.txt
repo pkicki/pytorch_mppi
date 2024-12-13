@@ -8,3 +8,5 @@ matplotlib
 jax
 brax
 imageio
+dm_control
+shimmy
