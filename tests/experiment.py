@@ -1,27 +1,14 @@
-from copy import deepcopy
-from time import perf_counter
-import gymnasium as gym
-import numpy as np
 import torch
-from dynamics_models.neural_model import NeuralModel, RolloutDataset
-from pytorch_mppi import mppi
-from pytorch_mppi import my_mppi
-from gymnasium import logger as gym_log
-import wandb
-
-from dm_control import suite
-import matplotlib.pyplot as plt
-
+import numpy as np
+from time import perf_counter
 from experiment_launcher import single_experiment, run_experiment
 
+from pytorch_mppi import my_mppi
 from pytorch_mppi.utils import load_env_and_model
 
 torch.set_num_interop_threads(1)
 torch.set_num_threads(1)
 
-def no_train(new_data):
-    pass
-    
 #@single_experiment
 #def experiment(env_name: str = "pendulum",
 #def experiment(env_name: str = "acrobot",
@@ -36,8 +23,6 @@ def no_train(new_data):
 def experiment(env_name: str = "car",
                #simulator: str = "brax",
                simulator: str = "gym",
-               neural_model: bool = False,
-               dataset_path: str = None,
                #dataset_path: str = "humanoid_fcem_nc7_sig7_h30_ns100.pt",
                n_episodes_per_fit: int = -1,
                #neural_model: bool = True,
@@ -91,38 +76,13 @@ def experiment(env_name: str = "car",
     noise_sigma = torch.tensor(noise_sigma, device=d, dtype=dtype)
     lambda_ = lambda_
 
-    dataset = RolloutDataset()
-    if dataset_path is not None:
-        dataset.load_data(dataset_path)
-
     env, model = load_env_and_model(env_name, simulator, n_envs=n_samples, render=render)
-
-    #s = env.reset()
-    #for i in range(10):
-    #    t0 = perf_counter()
-    #    env.step(np.zeros(model.action_dim))
-    #    t1 = perf_counter()
-    #    print(f"Step time", t1 - t0)
-    #assert False
 
     noise_sigma = noise_sigma * torch.eye(model.action_dim, device=d, dtype=dtype)
     state_dim = model.state_dim
     action_dim = model.action_dim
 
-    if neural_model:
-        model = NeuralModel(model, state_dim, action_dim, device=d, dtype=dtype)
-
     dt = model.dt
-    nx = state_dim
-    action_lb = torch.tensor(model.action_low, device=d, dtype=dtype) 
-    action_ub = torch.tensor(model.action_high, device=d, dtype=dtype)
-    #nx = env.observation_space.shape[0]
-    #mppi_gym = mppi.MPPI(model.dynamics, model.dynamics, model.running_cost, nx,
-    #                     noise_sigma, num_samples=n_samples, horizon=horizon,
-    #                     lambda_=lambda_, u_min=action_lb, u_max=action_ub, device=d,
-    #                     noise_beta=noise_beta, noise_cutoff_freq=noise_cutoff_freq,
-    #                     noise_interpolate_nodes=noise_interpolate_nodes,
-    #                     interpolation_type=interpolation_type, sampling_freq=1./dt)
 
     mppi_gym = my_mppi.MPPI(env=model, horizon=horizon, num_samples=n_samples,
                             control_dim=action_dim, state_dim=state_dim, lambda_=lambda_,
