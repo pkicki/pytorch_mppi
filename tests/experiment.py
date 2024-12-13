@@ -88,6 +88,8 @@ def experiment(env_name: str = "car",
 
     rewards = []
     trajectories = []
+    actionss = []
+    statess = []
     for i in range(n_episodes):
         t0 = perf_counter()
         env.reset()
@@ -103,11 +105,8 @@ def experiment(env_name: str = "car",
         print(f"Episode {i} Total reward", total_reward)
         states = history[..., :state_dim]
         actions = history[..., -action_dim:]
-        dataset.append_data(states, actions)
-        if n_episodes_per_fit > 0 and i % n_episodes_per_fit == 0:
-        #if n_episodes_per_fit > 0 and i > n_warmup_episodes and i % n_episodes_per_fit == 0:
-            model.train(dataset())
-        wandb.log({"total_reward": total_reward}, step=i)
+        actionss.append(actions)
+        statess.append(states)
         rewards.append(total_reward)
         #for i in range(states.shape[-1]):
         #    plt.subplot(4, 5, i+1)
