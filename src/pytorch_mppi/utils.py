@@ -111,7 +111,7 @@ class EnvWrapper:
             return self.env.unwrapped.simulator.get_state()[0]
         return self.env.get_state()
 
-def load_env_and_model(env_name, simulator, n_envs, render=False):
+def load_env_and_model(env_name, simulator, n_envs, render=False, compile=False):
     assert simulator in ["gym", "brax"], "Unknown simulator, only gym and brax are supported"
     print(f"Loading {env_name} environment")
 
