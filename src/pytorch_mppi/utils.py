@@ -245,7 +245,7 @@ def load_env_and_model(env_name, simulator, n_envs, render=False, compile=False)
         reward_type = "mppi"
         #reward_type = "rl"
         env = SingleTrackVecEnv(num_envs=1, reset_if_off_track=False, two_way_tracks=False,
-                                reward_type=reward_type, compile=False, tracks=[track], dt=dt)
+                                reward_type=reward_type, compile=compile, tracks=[track], dt=dt)
         model = SingleTrack(SingleTrackVecEnv(num_envs=n_envs, reset_if_off_track=False,
                                               two_way_tracks=False, reward_type=reward_type,
                                               compile=compile, tracks=[track], dt=dt))
