@@ -238,10 +238,11 @@ def load_env_and_model(env_name, simulator, n_envs, render=False, compile=False)
             model = Swimmer(deepcopy(env))
         elif simulator == "brax":
             raise NotImplementedError("Swimmer is not implemented in Brax")
-    elif env_name == "car":
+    elif env_name.startswith("car"):
         dt = 0.05
         #track = "oval"
         track = "icra_2023"
+        track = env_name[4:] if len(env_name) > 4 else track
         reward_type = "mppi"
         #reward_type = "rl"
         env = SingleTrackVecEnv(num_envs=1, reset_if_off_track=False, two_way_tracks=False,
