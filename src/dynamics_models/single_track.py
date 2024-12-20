@@ -20,6 +20,12 @@ class SingleTrack:
         #print(t1 - t0)
         return state.to(torch.float64), -rewards.to(torch.float64)
 
+    def terminal_cost(self, state):
+        self.env.unwrapped.simulator.set_state(state.to(torch.float32))
+        self.env.unwrapped.simulator._calculate_observation()
+        heading_diff_cost = np.abs(self.env.unwrapped.simulator.heading_diff)
+        return 10 * heading_diff_cost ** 2
+
     @property
     def state_dim(self):
         return self.env.unwrapped.state.shape[-1]

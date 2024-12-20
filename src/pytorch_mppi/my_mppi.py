@@ -13,6 +13,7 @@ class MPPI:
                  sampling_freq=None, lambda_=1.0, device='cpu'):
         self.env = env  # Environment
         self.dynamics = env.dynamics  # System dynamics function
+        self.terminal_cost = env.terminal_cost if hasattr(env, 'terminal_cost') else lambda x: 0.  # Terminal cost function
         self.horizon = horizon  # Prediction horizon
         self.action_space_horizon = noise_interpolate_nodes if noise_interpolate_nodes is not None else horizon
         self.num_samples = num_samples  # Number of sampled control sequences
@@ -105,30 +106,7 @@ class MPPI:
         else:
             clamped_perturbations = clamped_control_samples - self.U.unsqueeze(0)
 
-        # Simulate trajectories and compute costs
-        self.costs = torch.zeros(self.num_samples, device=self.device)
-        current_states = torch.tile(state[None], (self.num_samples, 1))
-        self.states = torch.zeros((self.num_samples, self.horizon + 1, self.state_dim), device=self.device)
-        self.states[:, 0] = current_states
-        # hotfix for setting s to good value
-        if s is not None:
-            self.env.env.unwrapped.simulator.set_s(s)
-        x = []
-        for t in range(self.horizon):
-            #current_control = control_samples[:, t]
-            current_control = clamped_control_samples[:, t]
-            next_states, cost = self.dynamics(current_states, current_control)
-            self.costs += cost
-            current_states = next_states
-            self.states[:, t + 1] = current_states
-            x.append(cost)
-                     
-        
-        #import matplotlib.pyplot as plt
-        #x = torch.stack(x)
-        #for i in range(x.shape[1]):
-        #    plt.plot(x[:, i])
-        #plt.show()
+            self.costs += self.terminal_cost(current_states)
 
         
         # Compute weights
