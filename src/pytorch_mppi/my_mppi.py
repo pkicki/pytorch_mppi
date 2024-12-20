@@ -126,7 +126,7 @@ class MPPI:
                 current_states = next_states
                 self.states[:, t + 1] = current_states
                 x.append(cost)
-            self.costs += self.terminal_cost(current_states)
+            #self.costs += self.terminal_cost(current_states)
                         
             
             #import matplotlib.pyplot as plt
