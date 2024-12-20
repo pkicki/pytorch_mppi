@@ -101,7 +101,7 @@ def experiment(env_name: str = "car",
         #total_reward, history = mppi.run_mppi(mppi_gym, env, model.train, iter=n_steps,
         #                                      shift_nominal_trajectory=(interpolation_type != "cubic_actions"),
         #                                      retrain_after_iter=n_steps, render=render)
-        total_reward, history = my_mppi.run_mppi(mppi_gym, env, iter=n_steps, render=render)
+        total_reward, history, info = my_mppi.run_mppi(mppi_gym, env, iter=n_steps, render=render)
         print(f"Episode {i} Total reward", total_reward)
         states = history[..., :state_dim]
         actions = history[..., -action_dim:]
