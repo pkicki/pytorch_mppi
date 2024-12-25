@@ -29,12 +29,16 @@ def experiment(
         noise_sigma = trial.suggest_float('noise_sigma', 0.1, 20., log=True)
         noise_beta = None
         noise_cutoff_freq = None
+        noise_filter_order = None
         noise_interpolate_nodes = None
         interpolation_type = None
         if alg == "icem":
             noise_beta = trial.suggest_float('noise_beta', 0.1, 10.)
         elif alg == "fcem":
             noise_cutoff_freq = trial.suggest_float('noise_cutoff_freq', 0.1, 10., log=True)
+        elif alg == "lp":
+            noise_cutoff_freq = trial.suggest_float('noise_cutoff_freq', 0.1, 10., log=True)
+            noise_filter_order = trial.suggest_int('noise_filter_order', 1, 10)
         elif alg == "mppi":
             pass
         elif alg == "cubic_noise":
@@ -54,6 +58,7 @@ def experiment(
                                       noise_sigma=noise_sigma,
                                       noise_beta=noise_beta,
                                       noise_cutoff_freq=noise_cutoff_freq,
+                                      noise_filter_order=noise_filter_order,
                                       noise_interpolate_nodes=noise_interpolate_nodes,
                                       interpolation_type=interpolation_type,
                                       render=False,

@@ -9,8 +9,8 @@ from pytorch_mppi.noises.filtered import FilteredMultivariateNormal
 
 class MPPI:
     def __init__(self, env, horizon, num_samples, control_dim, state_dim, noise_sigma,
-                 noise_beta=None, noise_cutoff_freq=None, noise_interpolate_nodes=None,
-                 sampling_freq=None, lambda_=1.0, device='cpu'):
+                 noise_beta=None, noise_cutoff_freq=None, noise_filter_order=None,
+                 noise_interpolate_nodes=None, sampling_freq=None, lambda_=1.0, device='cpu'):
         self.env = env  # Environment
         self.dynamics = env.dynamics  # System dynamics function
         self.terminal_cost = env.terminal_cost if hasattr(env, 'terminal_cost') else lambda x: 0.  # Terminal cost function
@@ -33,7 +33,11 @@ class MPPI:
             self.noise_dist = ColoredMultivariateNormal(self.noise_mu, noise_beta, covariance_matrix=self.noise_sigma)
         elif noise_cutoff_freq is not None:
             assert sampling_freq is not None
-            self.noise_dist = FilteredMultivariateNormal(self.noise_mu, sampling_freq, noise_cutoff_freq, covariance_matrix=self.noise_sigma)
+            if noise_filter_order is None:
+                self.noise_dist = FilteredMultivariateNormal(self.noise_mu, sampling_freq, noise_cutoff_freq, covariance_matrix=self.noise_sigma)
+            else:
+                self.noise_dist = FilteredMultivariateNormal(self.noise_mu, sampling_freq, noise_cutoff_freq,
+                                                             order=noise_filter_order, covariance_matrix=self.noise_sigma)
         #elif noise_interpolate_nodes is not None and self.interpolation_type == "cubic_noise":
         #    assert noise_interpolate_nodes > 1 # TODO check what is the minimum number of nodes
         #    assert noise_interpolate_nodes < horizon
