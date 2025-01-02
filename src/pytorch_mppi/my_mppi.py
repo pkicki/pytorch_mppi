@@ -176,7 +176,7 @@ def run_mppi(mppi, env, iter=1000, render=True):
         #print("Controller time:", t1 - t0)
         #action = action * 0.
         res = env.step(action.cpu().numpy())
-        if "progress" in res[3].keys():
+        if type(res[3]) == dict and "progress" in res[3].keys():
             info["progress"] += res[3]["progress"]
 
         s, r = res[0], res[1]
