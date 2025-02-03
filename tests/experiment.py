@@ -54,6 +54,7 @@ def experiment(env_name: str = "car",
                interpolation_type: str = None,
                #interpolation_type: str = "cubic_actions",
                #interpolation_type: str = "cubic_noise",
+               max_noise_dot: float = 10.0,
                #render: bool = False,
                render: bool = True,
                results_dir: str = "./results",
@@ -85,6 +86,7 @@ def experiment(env_name: str = "car",
                             noise_cutoff_freq=noise_cutoff_freq,
                             noise_filter_order=noise_filter_order,
                             noise_interpolate_nodes=noise_interpolate_nodes,
+                            max_noise_dot=max_noise_dot,
                             sampling_freq=1./dt)
 
     rewards = []
