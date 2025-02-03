@@ -13,7 +13,8 @@ class MuJoCo:
         #t0 = perf_counter()
         for i in range(state_np.shape[0]):
             self.env.unwrapped.set_state(state_np[i, :nq], state_np[i, nq:nq+nv])
-            state_np[i, :], rewards[i], _, _, _ = self.env.step(perturbed_action_np[i])
+            _, rewards[i], _, _, _ = self.env.step(perturbed_action_np[i])
+            state_np[i, :] = np.concatenate((self.env.unwrapped.data.qpos.flat, self.env.unwrapped.data.qvel.flat))
         #t1 = perf_counter()
         #print(t1 - t0)
         state = torch.tensor(state_np, device=state.device, dtype=state.dtype)
