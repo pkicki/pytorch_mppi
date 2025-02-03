@@ -3,9 +3,14 @@ pytorch_mppi.egg-info
 __pycache__
 dist
 *.png
+*.log
+*.npy
+*.db
+*.html
 tests/images
 tests/*.pkl
 tests/exp_results
 tests/results
 tests/datasets
 tests/logs
+paper/
